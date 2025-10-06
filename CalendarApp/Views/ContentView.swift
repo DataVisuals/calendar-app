@@ -1,0 +1,416 @@
+import SwiftUI
+import EventKit
+
+enum CalendarViewType: String, CaseIterable {
+    case month = "Month"
+    case week = "Week"
+    case workweek = "Work Week"
+    case threeDay = "3 Days"
+    case agenda = "Agenda"
+
+    var shortcut: KeyEquivalent {
+        switch self {
+        case .month: return "1"
+        case .week: return "2"
+        case .workweek: return "3"
+        case .threeDay: return "4"
+        case .agenda: return "5"
+        }
+    }
+
+    var tooltip: String {
+        switch self {
+        case .month: return "Month (⌘1)"
+        case .week: return "Week (⌘2)"
+        case .workweek: return "Work Week (⌘3)"
+        case .threeDay: return "3 Days (⌘4)"
+        case .agenda: return "Agenda (⌘5)"
+        }
+    }
+}
+
+struct ContentView: View {
+    @EnvironmentObject var calendarManager: CalendarManager
+    @State private var selectedView: CalendarViewType = .month
+    @State private var currentDate = Date()
+    @State private var showingNewEvent = false
+    @State private var showingSearch = false
+    @State private var searchText = ""
+    @FocusState private var searchFocused: Bool
+
+    private let calendar = Calendar.current
+
+    var body: some View {
+        ZStack {
+            VStack(spacing: 0) {
+                if !calendarManager.hasAccess {
+                    CalendarAccessView()
+                } else {
+                    mainContent
+                }
+            }
+
+            if showingSearch {
+                searchOverlay
+            }
+        }
+        .sheet(isPresented: $showingNewEvent) {
+            NewEventSheet()
+        }
+        .onChange(of: currentDate) { _ in
+            calendarManager.loadEvents()
+        }
+        .onChange(of: searchText) { newValue in
+            if !newValue.isEmpty {
+                searchForEvent(newValue)
+            }
+        }
+        .onAppear {
+            calendarManager.loadEvents()
+            calendarManager.loadReminders()
+        }
+        .applyViewShortcuts(selectedView: $selectedView)
+        .applySearchShortcut(showingSearch: $showingSearch, searchFocused: $searchFocused)
+    }
+
+    private var searchOverlay: some View {
+        VStack {
+            Spacer()
+
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.secondary)
+                    .font(.system(size: 16))
+
+                TextField("Search events...", text: $searchText)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 16))
+                    .focused($searchFocused)
+                    .onSubmit {
+                        closeSearch()
+                    }
+
+                if !searchText.isEmpty {
+                    Button(action: { searchText = "" }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color(NSColor.controlBackgroundColor))
+                    .shadow(radius: 10)
+            )
+            .padding()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.black.opacity(0.3))
+        .onTapGesture {
+            closeSearch()
+        }
+    }
+
+    private func closeSearch() {
+        showingSearch = false
+        searchText = ""
+        searchFocused = false
+    }
+
+    private func searchForEvent(_ query: String) {
+        let lowercased = query.lowercased()
+
+        // Search through events
+        if let foundEvent = calendarManager.events.first(where: { event in
+            (event.title?.lowercased().contains(lowercased) ?? false) ||
+            (event.location?.lowercased().contains(lowercased) ?? false) ||
+            (event.notes?.lowercased().contains(lowercased) ?? false)
+        }) {
+            // Navigate to the event's date
+            if let startDate = foundEvent.startDate {
+                currentDate = startDate
+            }
+        }
+    }
+
+    private var mainContent: some View {
+        VStack(spacing: 0) {
+            toolbarView
+            Divider()
+            contentArea
+        }
+    }
+
+    private var toolbarView: some View {
+        HStack(spacing: 20) {
+            navigationControls
+            Spacer()
+            ViewSelectorButtons(selectedView: $selectedView)
+                .frame(width: 450)
+            Spacer()
+            newEventButton
+        }
+        .padding(16)
+        .background(Color(NSColor.controlBackgroundColor))
+    }
+
+    private var navigationControls: some View {
+        HStack(spacing: 12) {
+            Button(action: goToToday) {
+                Text("Today")
+                    .font(.system(size: 15, weight: .medium))
+                    .padding(.horizontal, 4)
+            }
+            .buttonStyle(.bordered)
+
+            Button(action: previousPeriod) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 16))
+            }
+            .buttonStyle(.borderless)
+
+            Button(action: nextPeriod) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 16))
+            }
+            .buttonStyle(.borderless)
+
+            Text(headerTitle)
+                .font(.system(size: 22, weight: .semibold))
+                .frame(minWidth: 250)
+        }
+    }
+
+    private var newEventButton: some View {
+        Button(action: { showingNewEvent = true }) {
+            HStack(spacing: 6) {
+                Image(systemName: "plus")
+                    .font(.system(size: 14))
+                Text("New Event")
+                    .font(.system(size: 15, weight: .medium))
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+        }
+        .buttonStyle(.borderedProminent)
+        .keyboardShortcut("n", modifiers: [.command])
+    }
+
+    private var contentArea: some View {
+        GeometryReader { geometry in
+            VStack(spacing: 0) {
+                calendarView
+                    .frame(height: calendarManager.reminders.isEmpty ? geometry.size.height : geometry.size.height * 0.7)
+
+                if !calendarManager.reminders.isEmpty {
+                    Divider()
+                    RemindersSection()
+                        .frame(height: geometry.size.height * 0.3)
+                }
+            }
+        }
+    }
+
+    private var calendarView: some View {
+        ZStack {
+            switch selectedView {
+            case .month:
+                MonthView(currentDate: $currentDate)
+            case .week:
+                WeekView(currentDate: $currentDate)
+            case .workweek:
+                MultiDayView(currentDate: $currentDate, numberOfDays: 5, workweekOnly: true)
+            case .threeDay:
+                MultiDayView(currentDate: $currentDate, numberOfDays: 3)
+            case .agenda:
+                AgendaView(currentDate: $currentDate)
+            }
+        }
+    }
+
+    private var headerTitle: String {
+        let formatter = DateFormatter()
+
+        switch selectedView {
+        case .month:
+            formatter.dateFormat = "MMMM yyyy"
+        case .week, .workweek, .threeDay:
+            // Show date range
+            if let weekStart = calendar.dateInterval(of: .weekOfYear, for: currentDate)?.start,
+               let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart) {
+                if calendar.component(.month, from: weekStart) == calendar.component(.month, from: weekEnd) {
+                    formatter.dateFormat = "MMMM yyyy"
+                    return formatter.string(from: weekStart)
+                } else {
+                    let startFormatter = DateFormatter()
+                    startFormatter.dateFormat = "MMM d"
+                    let endFormatter = DateFormatter()
+                    endFormatter.dateFormat = "MMM d, yyyy"
+                    return "\(startFormatter.string(from: weekStart)) – \(endFormatter.string(from: weekEnd))"
+                }
+            }
+            formatter.dateFormat = "MMMM yyyy"
+        case .agenda:
+            formatter.dateFormat = "MMMM yyyy"
+        }
+
+        return formatter.string(from: currentDate)
+    }
+
+    private func goToToday() {
+        currentDate = Date()
+    }
+
+    private func previousPeriod() {
+        switch selectedView {
+        case .month:
+            currentDate = calendar.date(byAdding: .month, value: -1, to: currentDate) ?? currentDate
+        case .week, .workweek:
+            currentDate = calendar.date(byAdding: .weekOfYear, value: -1, to: currentDate) ?? currentDate
+        case .threeDay:
+            currentDate = calendar.date(byAdding: .day, value: -3, to: currentDate) ?? currentDate
+        case .agenda:
+            currentDate = calendar.date(byAdding: .month, value: -1, to: currentDate) ?? currentDate
+        }
+    }
+
+    private func nextPeriod() {
+        switch selectedView {
+        case .month:
+            currentDate = calendar.date(byAdding: .month, value: 1, to: currentDate) ?? currentDate
+        case .week, .workweek:
+            currentDate = calendar.date(byAdding: .weekOfYear, value: 1, to: currentDate) ?? currentDate
+        case .threeDay:
+            currentDate = calendar.date(byAdding: .day, value: 3, to: currentDate) ?? currentDate
+        case .agenda:
+            currentDate = calendar.date(byAdding: .month, value: 1, to: currentDate) ?? currentDate
+        }
+    }
+}
+
+struct ViewSelectorButtons: View {
+    @Binding var selectedView: CalendarViewType
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(CalendarViewType.allCases, id: \.self) { viewType in
+                ViewSelectorButton(
+                    viewType: viewType,
+                    isSelected: selectedView == viewType
+                ) {
+                    selectedView = viewType
+                }
+            }
+        }
+        .padding(4)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(NSColor.controlBackgroundColor))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color(NSColor.separatorColor).opacity(0.3), lineWidth: 1)
+        )
+    }
+}
+
+struct ViewSelectorButton: View {
+    let viewType: CalendarViewType
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(viewType.rawValue)
+                .font(.system(size: 14, weight: isSelected ? .medium : .regular))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(isSelected ? Color.accentColor : Color.clear)
+                )
+                .foregroundColor(isSelected ? .white : .primary)
+        }
+        .buttonStyle(.plain)
+        .help(viewType.tooltip)
+    }
+}
+
+struct CalendarAccessView: View {
+    @EnvironmentObject var calendarManager: CalendarManager
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "calendar.badge.exclamationmark")
+                .font(.system(size: 60))
+                .foregroundColor(.secondary)
+
+            VStack(spacing: 8) {
+                Text("Calendar Access Required")
+                    .font(.system(size: 20, weight: .semibold))
+
+                Text("This app needs access to your calendars to display and manage events.")
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            Button("Grant Access") {
+                calendarManager.requestAccess()
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// View modifier for keyboard shortcuts
+struct ViewShortcutsModifier: ViewModifier {
+    @Binding var selectedView: CalendarViewType
+
+    func body(content: Content) -> some View {
+        content
+            .background(
+                Group {
+                    Button("") { selectedView = .month }
+                        .keyboardShortcut("1", modifiers: .command)
+                        .hidden()
+                    Button("") { selectedView = .week }
+                        .keyboardShortcut("2", modifiers: .command)
+                        .hidden()
+                    Button("") { selectedView = .workweek }
+                        .keyboardShortcut("3", modifiers: .command)
+                        .hidden()
+                    Button("") { selectedView = .threeDay }
+                        .keyboardShortcut("4", modifiers: .command)
+                        .hidden()
+                    Button("") { selectedView = .agenda }
+                        .keyboardShortcut("5", modifiers: .command)
+                        .hidden()
+                }
+            )
+    }
+}
+
+extension View {
+    func applyViewShortcuts(selectedView: Binding<CalendarViewType>) -> some View {
+        self.modifier(ViewShortcutsModifier(selectedView: selectedView))
+    }
+
+    func applySearchShortcut(showingSearch: Binding<Bool>, searchFocused: FocusState<Bool>.Binding) -> some View {
+        self.background(
+            Button("") {
+                showingSearch.wrappedValue = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    searchFocused.wrappedValue = true
+                }
+            }
+            .keyboardShortcut("/", modifiers: [])
+            .hidden()
+        )
+    }
+}

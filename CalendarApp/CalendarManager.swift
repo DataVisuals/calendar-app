@@ -1,0 +1,112 @@
+import Foundation
+import EventKit
+
+class CalendarManager: ObservableObject {
+    @Published var events: [EKEvent] = []
+    @Published var calendars: [EKCalendar] = []
+    @Published var reminders: [EKReminder] = []
+    @Published var hasAccess = false
+
+    let eventStore = EKEventStore()
+    private let calendar = Calendar.current
+
+    init() {
+        checkAccess()
+    }
+
+    private func checkAccess() {
+        let status = EKEventStore.authorizationStatus(for: .event)
+        hasAccess = (status == .authorized || status == .fullAccess)
+        if hasAccess {
+            loadCalendars()
+        }
+    }
+
+    func requestAccess() {
+        if #available(macOS 14.0, *) {
+            eventStore.requestFullAccessToEvents { [weak self] granted, error in
+                DispatchQueue.main.async {
+                    self?.hasAccess = granted
+                    if granted {
+                        self?.loadCalendars()
+                        self?.loadEvents()
+                        self?.loadReminders()
+                    }
+                }
+            }
+        } else {
+            eventStore.requestAccess(to: .event) { [weak self] granted, error in
+                DispatchQueue.main.async {
+                    self?.hasAccess = granted
+                    if granted {
+                        self?.loadCalendars()
+                        self?.loadEvents()
+                        self?.loadReminders()
+                    }
+                }
+            }
+        }
+    }
+
+    func loadCalendars() {
+        calendars = eventStore.calendars(for: .event)
+    }
+
+    func loadEvents() {
+        let startDate = calendar.date(byAdding: .month, value: -1, to: Date()) ?? Date()
+        let endDate = calendar.date(byAdding: .month, value: 2, to: Date()) ?? Date()
+
+        let predicate = eventStore.predicateForEvents(withStart: startDate, end: endDate, calendars: nil)
+        events = eventStore.events(matching: predicate)
+    }
+
+    func loadReminders() {
+        let predicate = eventStore.predicateForReminders(in: nil)
+        eventStore.fetchReminders(matching: predicate) { [weak self] reminders in
+            DispatchQueue.main.async {
+                self?.reminders = reminders?.filter { !$0.isCompleted } ?? []
+            }
+        }
+    }
+
+    func events(for date: Date) -> [EKEvent] {
+        let startOfDay = calendar.startOfDay(for: date)
+        guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else {
+            return []
+        }
+
+        return events.filter { event in
+            guard let eventStart = event.startDate,
+                  let eventEnd = event.endDate else { return false }
+            return eventStart < endOfDay && eventEnd > startOfDay
+        }
+    }
+
+    func color(for calendar: EKCalendar) -> Color {
+        Color(cgColor: calendar.cgColor)
+    }
+
+    func createEvent(title: String, startDate: Date, endDate: Date, calendar: EKCalendar?, notes: String?) throws {
+        let event = EKEvent(eventStore: eventStore)
+        event.title = title
+        event.startDate = startDate
+        event.endDate = endDate
+        event.calendar = calendar ?? eventStore.defaultCalendarForNewEvents
+        event.notes = notes
+
+        try eventStore.save(event, span: .thisEvent)
+        loadEvents()
+    }
+}
+
+import SwiftUI
+
+extension Color {
+    init(cgColor: CGColor) {
+        if let components = cgColor.components, components.count >= 3 {
+            self.init(red: components[0], green: components[1], blue: components[2])
+        } else {
+            self.init(.sRGB, red: 0.5, green: 0.5, blue: 0.5)
+        }
+    }
+}
