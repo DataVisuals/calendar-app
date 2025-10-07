@@ -67,16 +67,26 @@ class CalendarManager: ObservableObject {
 
         // Observe defaultCalendar changes and persist
         $defaultCalendar
+            .dropFirst() // Skip initial nil value
             .sink { calendar in
                 if let calendar = calendar {
                     UserDefaults.standard.set(calendar.calendarIdentifier, forKey: "defaultCalendarIdentifier")
-                    print("Saved default calendar: \(calendar.title)")
+                    UserDefaults.standard.synchronize()
+                    print("✓ Saved default calendar: \(calendar.title) (ID: \(calendar.calendarIdentifier))")
+
+                    // Verify it was saved
+                    if let saved = UserDefaults.standard.string(forKey: "defaultCalendarIdentifier") {
+                        print("✓ Verified saved in UserDefaults: \(saved)")
+                    }
                 } else {
                     UserDefaults.standard.removeObject(forKey: "defaultCalendarIdentifier")
-                    print("Cleared default calendar")
+                    UserDefaults.standard.synchronize()
+                    print("✓ Cleared default calendar")
                 }
             }
             .store(in: &cancellables)
+
+        print("CalendarManager initialized")
     }
 
     private var cancellables = Set<AnyCancellable>()
@@ -147,18 +157,27 @@ class CalendarManager: ObservableObject {
 
     func loadCalendars() {
         calendars = eventStore.calendars(for: .event)
+        print("Loaded \(calendars.count) calendars")
 
         // Restore default calendar from UserDefaults
         if let savedIdentifier = UserDefaults.standard.string(forKey: "defaultCalendarIdentifier") {
-            print("Restoring default calendar with ID: \(savedIdentifier)")
+            print("📥 Found saved default calendar ID: \(savedIdentifier)")
             if let savedCalendar = calendars.first(where: { $0.calendarIdentifier == savedIdentifier }) {
-                defaultCalendar = savedCalendar
-                print("Restored default calendar: \(savedCalendar.title)")
+                // Use DispatchQueue to avoid triggering the publisher during initialization
+                DispatchQueue.main.async { [weak self] in
+                    self?.defaultCalendar = savedCalendar
+                    print("✓ Restored default calendar: \(savedCalendar.title)")
+                }
             } else {
-                print("Could not find calendar with saved ID")
+                print("⚠️ Could not find calendar with saved ID among \(calendars.count) calendars")
+                // List available calendar IDs for debugging
+                print("Available calendars:")
+                for cal in calendars {
+                    print("  - \(cal.title): \(cal.calendarIdentifier)")
+                }
             }
         } else {
-            print("No saved default calendar")
+            print("ℹ️ No saved default calendar found in UserDefaults")
         }
     }
 
@@ -337,9 +356,22 @@ class CalendarManager: ObservableObject {
             throw NSError(domain: "CalendarManager", code: -3, userInfo: [NSLocalizedDescriptionKey: "Event not found in store"])
         }
 
-        print("Deleting event: '\(storeEvent.title ?? "Untitled")'")
-        try eventStore.remove(storeEvent, span: .thisEvent, commit: true)
-        print("Successfully deleted event")
+        print("Deleting event: '\(storeEvent.title ?? "Untitled")' from calendar '\(storeEvent.calendar.title)'")
+        print("Event details - Start: \(String(describing: storeEvent.startDate)), End: \(String(describing: storeEvent.endDate))")
+
+        // Check if the calendar allows modifications
+        if !storeEvent.calendar.allowsContentModifications {
+            throw NSError(domain: "CalendarManager", code: -5, userInfo: [NSLocalizedDescriptionKey: "This calendar does not allow modifications. The event cannot be deleted."])
+        }
+
+        do {
+            try eventStore.remove(storeEvent, span: .thisEvent, commit: true)
+            print("Successfully deleted event")
+        } catch let error as NSError {
+            print("Delete failed with error: \(error)")
+            print("Error domain: \(error.domain), code: \(error.code)")
+            throw error
+        }
 
         // Reload events
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
@@ -348,13 +380,57 @@ class CalendarManager: ObservableObject {
     }
 
     func deleteEvent(byProperties properties: EventProperties) throws {
-        guard let event = findEvent(byProperties: properties) else {
+        // First, check if the event has an identifier by searching
+        if let cachedEvent = events.first(where: { event in
+            event.title == properties.title &&
+            abs(event.startDate.timeIntervalSince(properties.startDate)) < 2 &&
+            abs(event.endDate.timeIntervalSince(properties.endDate)) < 2 &&
+            event.calendar.calendarIdentifier == properties.calendarIdentifier
+        }), let identifier = cachedEvent.eventIdentifier {
+            // If it has an identifier, use the identifier-based deletion
+            print("Event has identifier, using deleteEvent(withIdentifier:)")
+            try deleteEvent(withIdentifier: identifier)
+            return
+        }
+
+        // For events without identifiers, we need to search and delete in one operation
+        print("Searching for event without identifier to delete")
+        let startOfDay = calendar.startOfDay(for: properties.startDate)
+        guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else {
+            throw NSError(domain: "CalendarManager", code: -6, userInfo: [NSLocalizedDescriptionKey: "Invalid date"])
+        }
+
+        // Get fresh events from store
+        let predicate = eventStore.predicateForEvents(withStart: startOfDay, end: endOfDay, calendars: nil)
+        let matchingEvents = eventStore.events(matching: predicate)
+
+        guard let eventToDelete = matchingEvents.first(where: { event in
+            event.title == properties.title &&
+            abs(event.startDate.timeIntervalSince(properties.startDate)) < 2 &&
+            abs(event.endDate.timeIntervalSince(properties.endDate)) < 2 &&
+            event.calendar.calendarIdentifier == properties.calendarIdentifier
+        }) else {
             throw NSError(domain: "CalendarManager", code: -4, userInfo: [NSLocalizedDescriptionKey: "Event not found"])
         }
 
-        print("Deleting event by properties: '\(event.title ?? "Untitled")'")
-        try eventStore.remove(event, span: .thisEvent, commit: true)
-        print("Successfully deleted event")
+        print("Deleting event by properties: '\(eventToDelete.title ?? "Untitled")' from calendar '\(eventToDelete.calendar.title)'")
+        print("Event details - Start: \(String(describing: eventToDelete.startDate)), End: \(String(describing: eventToDelete.endDate))")
+
+        // Check if the calendar allows modifications
+        if !eventToDelete.calendar.allowsContentModifications {
+            throw NSError(domain: "CalendarManager", code: -5, userInfo: [NSLocalizedDescriptionKey: "This calendar does not allow modifications. The event cannot be deleted."])
+        }
+
+        do {
+            // Try to remove the event immediately after fetching
+            try eventStore.remove(eventToDelete, span: .thisEvent, commit: true)
+            print("Successfully deleted event")
+        } catch let error as NSError {
+            print("Delete failed with error: \(error)")
+            print("Error domain: \(error.domain), code: \(error.code)")
+            print("Error userInfo: \(error.userInfo)")
+            throw error
+        }
 
         // Reload events
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
