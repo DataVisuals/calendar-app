@@ -41,7 +41,7 @@ struct AgendaDaySection: View {
     private let calendar = Calendar.current
 
     var body: some View {
-        let dayEvents = calendarManager.events(for: date).filter { $0.eventIdentifier != nil }
+        let dayEvents = calendarManager.events(for: date)
 
         if !dayEvents.isEmpty || calendar.isDateInToday(date) {
             VStack(alignment: .leading, spacing: 8) {
@@ -79,8 +79,8 @@ struct AgendaDaySection: View {
                         .padding(.vertical, 8)
                 } else {
                     VStack(alignment: .leading, spacing: 6) {
-                        ForEach(dayEvents, id: \.eventIdentifier) { event in
-                            AgendaEventRow(event: event, isHighlighted: highlightedEventIDs.contains(event.eventIdentifier))
+                        ForEach(Array(dayEvents.enumerated()), id: \.offset) { _, event in
+                            AgendaEventRow(event: event, isHighlighted: event.eventIdentifier.map { highlightedEventIDs.contains($0) } ?? false)
                         }
                     }
                     .padding(.leading, 62)

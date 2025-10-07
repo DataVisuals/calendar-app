@@ -114,8 +114,8 @@ struct DayColumn: View {
                 }
 
                 // Events
-                ForEach(dayEvents, id: \.eventIdentifier) { event in
-                    EventBlock(event: event, hourHeight: hourHeight, date: date, isHighlighted: highlightedEventIDs.contains(event.eventIdentifier))
+                ForEach(Array(dayEvents.enumerated()), id: \.offset) { _, event in
+                    EventBlock(event: event, hourHeight: hourHeight, date: date, isHighlighted: event.eventIdentifier.map { highlightedEventIDs.contains($0) } ?? false)
                 }
             }
         }
@@ -149,7 +149,7 @@ struct DayColumn: View {
     }
 
     private var dayEvents: [EKEvent] {
-        calendarManager.events(for: date).filter { !$0.isAllDay && $0.eventIdentifier != nil }
+        calendarManager.events(for: date).filter { !$0.isAllDay }
     }
 }
 

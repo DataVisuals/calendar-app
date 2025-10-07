@@ -93,8 +93,8 @@ struct DayCell: View {
             // Events
             ScrollView {
                 VStack(alignment: .leading, spacing: 2) {
-                    ForEach(dayEvents.prefix(3), id: \.eventIdentifier) { event in
-                        EventBadge(event: event, compact: true, isHighlighted: highlightedEventIDs.contains(event.eventIdentifier))
+                    ForEach(Array(dayEvents.prefix(3).enumerated()), id: \.offset) { _, event in
+                        EventBadge(event: event, compact: true, isHighlighted: event.eventIdentifier.map { highlightedEventIDs.contains($0) } ?? false)
                     }
 
                     if dayEvents.count > 3 {
@@ -139,7 +139,7 @@ struct DayCell: View {
     }
 
     private var dayEvents: [EKEvent] {
-        calendarManager.events(for: date).filter { $0.eventIdentifier != nil }
+        calendarManager.events(for: date)
     }
 }
 
