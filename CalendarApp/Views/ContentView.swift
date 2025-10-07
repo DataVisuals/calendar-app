@@ -210,8 +210,11 @@ struct ContentView: View {
                 .textFieldStyle(.plain)
                 .font(.system(size: 14 * calendarManager.fontSize.scale))
                 .focused($quickAddFocused)
+                .disabled(!calendarManager.hasAccess)
                 .onSubmit {
-                    createQuickEvent()
+                    if calendarManager.hasAccess {
+                        createQuickEvent()
+                    }
                 }
 
             if !quickAddText.isEmpty {

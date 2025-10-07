@@ -157,11 +157,15 @@ class CalendarManager: ObservableObject {
     }
 
     func createEvent(title: String, startDate: Date, endDate: Date, calendar: EKCalendar?, notes: String?) throws {
+        guard let targetCalendar = calendar ?? defaultCalendar ?? eventStore.defaultCalendarForNewEvents else {
+            throw NSError(domain: "CalendarManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No calendar available for new events"])
+        }
+
         let event = EKEvent(eventStore: eventStore)
         event.title = title
         event.startDate = startDate
         event.endDate = endDate
-        event.calendar = calendar ?? defaultCalendar ?? eventStore.defaultCalendarForNewEvents
+        event.calendar = targetCalendar
         event.notes = notes
 
         try eventStore.save(event, span: .thisEvent)

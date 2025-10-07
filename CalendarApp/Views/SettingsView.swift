@@ -77,15 +77,33 @@ struct SettingsView: View {
                     Text("Default Calendar")
                         .font(.system(size: 16, weight: .semibold))
 
-                    if !calendarManager.calendars.isEmpty {
-                        Picker("", selection: $calendarManager.defaultCalendar) {
-                            Text("System Default").tag(nil as EKCalendar?)
-                            ForEach(calendarManager.calendars, id: \.calendarIdentifier) { calendar in
-                                Text(calendar.title).tag(calendar as EKCalendar?)
+                    if calendarManager.hasAccess && !calendarManager.calendars.isEmpty {
+                        Menu {
+                            Button("System Default") {
+                                calendarManager.defaultCalendar = nil
                             }
+                            ForEach(calendarManager.calendars, id: \.calendarIdentifier) { calendar in
+                                Button(calendar.title) {
+                                    calendarManager.defaultCalendar = calendar
+                                }
+                            }
+                        } label: {
+                            HStack {
+                                Text(calendarManager.defaultCalendar?.title ?? "System Default")
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color(NSColor.controlBackgroundColor))
+                            )
                         }
-                        .pickerStyle(.menu)
-                        .labelsHidden()
+                        .buttonStyle(.plain)
 
                         Text("Calendar for quick add events")
                             .font(.system(size: 13))
