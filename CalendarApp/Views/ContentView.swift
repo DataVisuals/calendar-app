@@ -215,15 +215,16 @@ struct ContentView: View {
     private var contentArea: some View {
         GeometryReader { geometry in
             VStack(spacing: 0) {
-                let hasBottomPanels = !calendarManager.reminders.isEmpty
-                let bottomPanelHeight = hasBottomPanels ? geometry.size.height * 0.3 : 0
+                // Always show bottom panel with weather and reminders
+                let bottomPanelHeight = geometry.size.height * 0.25
 
                 calendarView
                     .frame(height: geometry.size.height - bottomPanelHeight)
 
-                if hasBottomPanels {
-                    Divider()
-                    HStack(spacing: 0) {
+                Divider()
+
+                HStack(spacing: 0) {
+                    if !calendarManager.reminders.isEmpty {
                         RemindersSection()
                             .frame(width: geometry.size.width * 0.6)
 
@@ -231,9 +232,13 @@ struct ContentView: View {
 
                         WeatherSection()
                             .frame(width: geometry.size.width * 0.4)
+                    } else {
+                        // Just show weather if no reminders
+                        WeatherSection()
+                            .frame(maxWidth: .infinity)
                     }
-                    .frame(height: bottomPanelHeight)
                 }
+                .frame(height: bottomPanelHeight)
             }
         }
     }

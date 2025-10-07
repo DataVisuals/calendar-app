@@ -19,17 +19,18 @@ class WeatherManager: NSObject, ObservableObject, CLLocationManagerDelegate {
 
     override init() {
         super.init()
+
+        // Generate mock weather immediately to avoid any timing issues
+        generateMockWeather()
+
+        // Set up location manager
         locationManager.delegate = self
 
         // Check if WeatherKit is available (macOS 13.0+)
         if #available(macOS 13.0, *) {
             isWeatherKitAvailable = true
-            checkLocationPermission()
         } else {
-            // WeatherKit not available on this macOS version
             isWeatherKitAvailable = false
-            // Generate mock data for older macOS versions
-            generateMockWeather()
         }
     }
 
@@ -109,8 +110,12 @@ class WeatherManager: NSObject, ObservableObject, CLLocationManagerDelegate {
             )
         }
 
-        DispatchQueue.main.async {
+        if Thread.isMainThread {
             self.dailyForecasts = mockForecasts
+        } else {
+            DispatchQueue.main.async {
+                self.dailyForecasts = mockForecasts
+            }
         }
     }
 }
