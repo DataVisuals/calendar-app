@@ -21,7 +21,7 @@ struct WeekView: View {
                         VStack(spacing: 0) {
                             ForEach(0..<24, id: \.self) { hour in
                                 Text(formatHour(hour))
-                                    .font(.system(size: 14))
+                                    .font(.system(size: 14 * calendarManager.fontSize.scale))
                                     .foregroundColor(.secondary)
                                     .frame(width: 60, height: hourHeight, alignment: .top)
                             }
@@ -81,11 +81,11 @@ struct DayColumn: View {
             // Header
             VStack(spacing: 4) {
                 Text(dayOfWeek)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 13 * calendarManager.fontSize.scale, weight: .medium))
                     .foregroundColor(.secondary)
 
                 Text("\(calendar.component(.day, from: date))")
-                    .font(.system(size: 20, weight: isToday ? .bold : .regular))
+                    .font(.system(size: 20 * calendarManager.fontSize.scale, weight: isToday ? .bold : .regular))
                     .foregroundColor(isToday ? .white : .primary)
                     .frame(width: 36, height: 36)
                     .background(
@@ -163,17 +163,17 @@ struct EventBlock: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 4) {
                 Image(systemName: EventIconHelper.icon(for: event))
-                    .font(.system(size: 12))
+                    .font(.system(size: 12 * calendarManager.fontSize.scale))
                     .foregroundColor(calendarManager.color(for: event.calendar))
                     .frame(width: 16)
 
                 Text(event.title ?? "Untitled")
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 14 * calendarManager.fontSize.scale, weight: .medium))
                     .lineLimit(1)
             }
 
             Text(timeString)
-                .font(.system(size: 12))
+                .font(.system(size: 12 * calendarManager.fontSize.scale))
                 .foregroundColor(.secondary)
                 .padding(.leading, 20)
         }

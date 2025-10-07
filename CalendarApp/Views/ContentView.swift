@@ -80,11 +80,11 @@ struct ContentView: View {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.secondary)
-                    .font(.system(size: 16))
+                    .font(.system(size: 16 * calendarManager.fontSize.scale))
 
                 TextField("Search events...", text: $searchText)
                     .textFieldStyle(.plain)
-                    .font(.system(size: 16))
+                    .font(.system(size: 16 * calendarManager.fontSize.scale))
                     .focused($searchFocused)
                     .onSubmit {
                         closeSearch()
@@ -160,25 +160,25 @@ struct ContentView: View {
         HStack(spacing: 12) {
             Button(action: goToToday) {
                 Text("Today")
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.system(size: 15 * calendarManager.fontSize.scale, weight: .medium))
                     .padding(.horizontal, 4)
             }
             .buttonStyle(.bordered)
 
             Button(action: previousPeriod) {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 16))
+                    .font(.system(size: 16 * calendarManager.fontSize.scale))
             }
             .buttonStyle(.borderless)
 
             Button(action: nextPeriod) {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 16))
+                    .font(.system(size: 16 * calendarManager.fontSize.scale))
             }
             .buttonStyle(.borderless)
 
             Text(headerTitle)
-                .font(.system(size: 22, weight: .semibold))
+                .font(.system(size: 22 * calendarManager.fontSize.scale, weight: .semibold))
                 .frame(minWidth: 250)
         }
     }
@@ -187,9 +187,9 @@ struct ContentView: View {
         Button(action: { showingNewEvent = true }) {
             HStack(spacing: 6) {
                 Image(systemName: "plus")
-                    .font(.system(size: 14))
+                    .font(.system(size: 14 * calendarManager.fontSize.scale))
                 Text("New Event")
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.system(size: 15 * calendarManager.fontSize.scale, weight: .medium))
             }
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
@@ -321,10 +321,12 @@ struct ViewSelectorButton: View {
     let isSelected: Bool
     let action: () -> Void
 
+    @EnvironmentObject var calendarManager: CalendarManager
+
     var body: some View {
         Button(action: action) {
             Text(viewType.rawValue)
-                .font(.system(size: 14, weight: isSelected ? .medium : .regular))
+                .font(.system(size: 14 * calendarManager.fontSize.scale, weight: isSelected ? .medium : .regular))
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .frame(maxWidth: .infinity)
@@ -345,15 +347,15 @@ struct CalendarAccessView: View {
     var body: some View {
         VStack(spacing: 20) {
             Image(systemName: "calendar.badge.exclamationmark")
-                .font(.system(size: 60))
+                .font(.system(size: 60 * calendarManager.fontSize.scale))
                 .foregroundColor(.secondary)
 
             VStack(spacing: 8) {
                 Text("Calendar Access Required")
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(size: 20 * calendarManager.fontSize.scale, weight: .semibold))
 
                 Text("This app needs access to your calendars to display and manage events.")
-                    .font(.system(size: 14))
+                    .font(.system(size: 14 * calendarManager.fontSize.scale))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
             }

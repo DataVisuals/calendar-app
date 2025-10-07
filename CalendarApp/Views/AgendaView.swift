@@ -47,19 +47,19 @@ struct AgendaDaySection: View {
                 HStack(spacing: 12) {
                     VStack(spacing: 2) {
                         Text(monthAbbr)
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.system(size: 13 * calendarManager.fontSize.scale, weight: .medium))
                             .foregroundColor(.secondary)
                         Text("\(calendar.component(.day, from: date))")
-                            .font(.system(size: 22, weight: .bold))
+                            .font(.system(size: 22 * calendarManager.fontSize.scale, weight: .bold))
                     }
                     .frame(width: 50)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text(dayOfWeek)
-                            .font(.system(size: 18, weight: .semibold))
+                            .font(.system(size: 18 * calendarManager.fontSize.scale, weight: .semibold))
                         if calendar.isDateInToday(date) {
                             Text("Today")
-                                .font(.system(size: 13))
+                                .font(.system(size: 13 * calendarManager.fontSize.scale))
                                 .foregroundColor(.accentColor)
                         }
                     }
@@ -71,7 +71,7 @@ struct AgendaDaySection: View {
                 // Events
                 if dayEvents.isEmpty {
                     Text("No events")
-                        .font(.system(size: 15))
+                        .font(.system(size: 15 * calendarManager.fontSize.scale))
                         .foregroundColor(.secondary)
                         .padding(.leading, 62)
                         .padding(.vertical, 8)
@@ -111,12 +111,12 @@ struct AgendaEventRow: View {
             // Time or all-day indicator
             if event.isAllDay {
                 Text("All Day")
-                    .font(.system(size: 14))
+                    .font(.system(size: 14 * calendarManager.fontSize.scale))
                     .foregroundColor(.secondary)
                     .frame(width: 80, alignment: .leading)
             } else {
                 Text(timeString)
-                    .font(.system(size: 14))
+                    .font(.system(size: 14 * calendarManager.fontSize.scale))
                     .foregroundColor(.secondary)
                     .frame(width: 80, alignment: .leading)
             }
@@ -131,26 +131,26 @@ struct AgendaEventRow: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
                         Image(systemName: EventIconHelper.icon(for: event))
-                            .font(.system(size: 14))
+                            .font(.system(size: 14 * calendarManager.fontSize.scale))
                             .foregroundColor(calendarManager.color(for: event.calendar))
 
                         Text(event.title ?? "Untitled")
-                            .font(.system(size: 16, weight: .medium))
+                            .font(.system(size: 16 * calendarManager.fontSize.scale, weight: .medium))
                     }
 
                     if let location = event.location, !location.isEmpty {
                         HStack(spacing: 4) {
                             Image(systemName: "location.fill")
-                                .font(.system(size: 12))
+                                .font(.system(size: 12 * calendarManager.fontSize.scale))
                             Text(location)
-                                .font(.system(size: 14))
+                                .font(.system(size: 14 * calendarManager.fontSize.scale))
                         }
                         .foregroundColor(.secondary)
                     }
 
                     if let notes = event.notes, !notes.isEmpty {
                         Text(notes)
-                            .font(.system(size: 14))
+                            .font(.system(size: 14 * calendarManager.fontSize.scale))
                             .foregroundColor(.secondary)
                             .lineLimit(2)
                     }

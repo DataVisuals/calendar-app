@@ -1,11 +1,28 @@
 import Foundation
 import EventKit
 
+enum FontSize: String, CaseIterable {
+    case small = "Small"
+    case medium = "Medium"
+    case large = "Large"
+    case extraLarge = "Extra Large"
+
+    var scale: CGFloat {
+        switch self {
+        case .small: return 0.85
+        case .medium: return 1.0
+        case .large: return 1.15
+        case .extraLarge: return 1.3
+        }
+    }
+}
+
 class CalendarManager: ObservableObject {
     @Published var events: [EKEvent] = []
     @Published var calendars: [EKCalendar] = []
     @Published var reminders: [EKReminder] = []
     @Published var hasAccess = false
+    @Published var fontSize: FontSize = .medium
 
     let eventStore = EKEventStore()
     private let calendar = Calendar.current
@@ -16,7 +33,11 @@ class CalendarManager: ObservableObject {
 
     private func checkAccess() {
         let status = EKEventStore.authorizationStatus(for: .event)
-        hasAccess = (status == .authorized || status == .fullAccess)
+        if #available(macOS 14.0, *) {
+            hasAccess = (status == .authorized || status == .fullAccess)
+        } else {
+            hasAccess = (status == .authorized)
+        }
         if hasAccess {
             loadCalendars()
         }

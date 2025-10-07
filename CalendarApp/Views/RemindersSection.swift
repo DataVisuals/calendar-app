@@ -9,10 +9,10 @@ struct RemindersSection: View {
             // Header
             HStack {
                 Text("Reminders")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: 18 * calendarManager.fontSize.scale, weight: .semibold))
                 Spacer()
                 Text("\(calendarManager.reminders.count)")
-                    .font(.system(size: 15))
+                    .font(.system(size: 15 * calendarManager.fontSize.scale))
                     .foregroundColor(.secondary)
             }
             .padding(16)
@@ -26,7 +26,7 @@ struct RemindersSection: View {
                     ForEach(groupedReminders.keys.sorted(), id: \.self) { listTitle in
                         VStack(alignment: .leading, spacing: 8) {
                             Text(listTitle)
-                                .font(.system(size: 15, weight: .medium))
+                                .font(.system(size: 15 * calendarManager.fontSize.scale, weight: .medium))
                                 .foregroundColor(.secondary)
 
                             ForEach(groupedReminders[listTitle] ?? [], id: \.calendarItemIdentifier) { reminder in
@@ -55,31 +55,35 @@ struct ReminderRow: View {
         HStack(spacing: 12) {
             Button(action: toggleCompletion) {
                 Image(systemName: reminder.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 18))
+                    .font(.system(size: 18 * calendarManager.fontSize.scale))
                     .foregroundColor(reminder.isCompleted ? .accentColor : .secondary)
             }
             .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(reminder.title ?? "Untitled")
-                    .font(.system(size: 15))
+                    .font(.system(size: 15 * calendarManager.fontSize.scale))
                     .strikethrough(reminder.isCompleted)
 
                 if let dueDate = reminder.dueDateComponents?.date {
                     HStack(spacing: 4) {
                         Image(systemName: "clock")
-                            .font(.system(size: 12))
+                            .font(.system(size: 12 * calendarManager.fontSize.scale))
                         Text(formatDate(dueDate))
-                            .font(.system(size: 13))
+                            .font(.system(size: 13 * calendarManager.fontSize.scale))
                     }
                     .foregroundColor(isOverdue(dueDate) ? .red : .secondary)
+                } else {
+                    Text("No date")
+                        .font(.system(size: 13 * calendarManager.fontSize.scale))
+                        .foregroundColor(.secondary)
                 }
 
                 if reminder.priority > 0 {
                     HStack(spacing: 4) {
                         ForEach(0..<priorityLevel, id: \.self) { _ in
                             Image(systemName: "exclamationmark")
-                                .font(.system(size: 11))
+                                .font(.system(size: 11 * calendarManager.fontSize.scale))
                         }
                     }
                     .foregroundColor(.orange)

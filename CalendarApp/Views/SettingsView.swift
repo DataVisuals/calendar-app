@@ -10,27 +10,50 @@ struct SettingsView: View {
 
             Divider()
 
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Calendar Access")
-                    .font(.system(size: 16, weight: .semibold))
+            VStack(alignment: .leading, spacing: 20) {
+                // Calendar Access
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Calendar Access")
+                        .font(.system(size: 16, weight: .semibold))
 
-                if calendarManager.hasAccess {
-                    Text("✓ Calendar access granted")
-                        .foregroundColor(.green)
-                } else {
-                    Text("✗ Calendar access not granted")
-                        .foregroundColor(.red)
+                    if calendarManager.hasAccess {
+                        Text("✓ Calendar access granted")
+                            .foregroundColor(.green)
+                    } else {
+                        Text("✗ Calendar access not granted")
+                            .foregroundColor(.red)
 
-                    Button("Request Access") {
-                        calendarManager.requestAccess()
+                        Button("Request Access") {
+                            calendarManager.requestAccess()
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
-                    .buttonStyle(.borderedProminent)
+                }
+
+                Divider()
+
+                // Font Size
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Font Size")
+                        .font(.system(size: 16, weight: .semibold))
+
+                    Picker("", selection: $calendarManager.fontSize) {
+                        ForEach(FontSize.allCases, id: \.self) { size in
+                            Text(size.rawValue).tag(size)
+                        }
+                    }
+                    .pickerStyle(.radioGroup)
+                    .labelsHidden()
+
+                    Text("Changes font size throughout the app")
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
                 }
             }
 
             Spacer()
         }
         .padding()
-        .frame(width: 400, height: 300)
+        .frame(width: 450, height: 400)
     }
 }

@@ -29,7 +29,7 @@ struct MultiDayView: View {
                         VStack(spacing: 0) {
                             ForEach(0..<24, id: \.self) { hour in
                                 Text(formatHour(hour))
-                                    .font(.system(size: 14))
+                                    .font(.system(size: 14 * calendarManager.fontSize.scale))
                                     .foregroundColor(.secondary)
                                     .frame(width: 60, height: hourHeight, alignment: .top)
                             }

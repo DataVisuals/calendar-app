@@ -15,7 +15,7 @@ struct MonthView: View {
                 HStack(spacing: 0) {
                     ForEach(Array(daysOfWeek.enumerated()), id: \.element) { index, day in
                         Text(day)
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 16 * calendarManager.fontSize.scale, weight: .semibold))
                             .foregroundColor(index == 0 || index == 6 ? .accentColor : .secondary)
                             .frame(maxWidth: .infinity)
                     }
@@ -77,7 +77,7 @@ struct DayCell: View {
             HStack {
                 Spacer()
                 Text("\(calendar.component(.day, from: date))")
-                    .font(.system(size: 20, weight: isToday ? .bold : .regular))
+                    .font(.system(size: 20 * calendarManager.fontSize.scale, weight: isToday ? .bold : .regular))
                     .foregroundColor(currentMonth ? (isToday ? .white : .primary) : .secondary)
                     .frame(width: 36, height: 36)
                     .background(
@@ -97,7 +97,7 @@ struct DayCell: View {
 
                     if dayEvents.count > 3 {
                         Text("+\(dayEvents.count - 3) more")
-                            .font(.system(size: 12))
+                            .font(.system(size: 12 * calendarManager.fontSize.scale))
                             .foregroundColor(.secondary)
                             .padding(.horizontal, 4)
                             .padding(.vertical, 2)
@@ -149,13 +149,13 @@ struct EventBadge: View {
     var body: some View {
         HStack(alignment: .top, spacing: 4) {
             Image(systemName: EventIconHelper.icon(for: event))
-                .font(.system(size: compact ? 11 : 13))
+                .font(.system(size: (compact ? 11 : 13) * calendarManager.fontSize.scale))
                 .foregroundColor(calendarManager.color(for: event.calendar))
                 .frame(width: compact ? 14 : 16)
                 .padding(.top, 1)
 
             Text(event.title ?? "Untitled")
-                .font(.system(size: compact ? 13 : 15))
+                .font(.system(size: (compact ? 13 : 15) * calendarManager.fontSize.scale))
                 .lineLimit(compact ? 2 : 1)
                 .fixedSize(horizontal: false, vertical: true)
                 .truncationMode(.tail)
