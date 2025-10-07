@@ -85,7 +85,7 @@ struct DayCell: View {
     let weatherForecasts: [DailyWeatherInfo]
     let onDoubleClick: (Date) -> Void
 
-    @State private var draggedEvent: EKEvent?
+    @State private var isDropTarget = false
 
     private var calendar: Calendar {
         var cal = Calendar.current
@@ -147,7 +147,9 @@ struct DayCell: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
         .background(
             Group {
-                if isWeekend {
+                if isDropTarget {
+                    Color.accentColor.opacity(0.25)
+                } else if isWeekend {
                     Color.accentColor.opacity(currentMonth ? 0.08 : 0.04)
                 } else {
                     currentMonth ? Color(NSColor.controlBackgroundColor) : Color(NSColor.controlBackgroundColor).opacity(0.5)
@@ -166,13 +168,14 @@ struct DayCell: View {
         .onTapGesture(count: 2) {
             onDoubleClick(date)
         }
-        .onDrop(of: [.text], isTargeted: nil) { providers in
+        .onDrop(of: [.text], isTargeted: $isDropTarget) { providers in
             guard let provider = providers.first else { return false }
 
-            provider.loadItem(forTypeIdentifier: "public.text", options: nil) { data, error in
-                guard let data = data as? Data,
+            _ = provider.loadDataRepresentation(forTypeIdentifier: "public.text") { data, error in
+                guard let data = data,
                       let eventId = String(data: data, encoding: .utf8),
                       let event = calendarManager.events.first(where: { $0.eventIdentifier == eventId }) else {
+                    print("Failed to load drop data")
                     return
                 }
 
@@ -250,10 +253,16 @@ struct EventBadge: View {
                 .stroke(isHighlighted ? calendarManager.color(for: event.calendar).opacity(0.8) : Color.clear, lineWidth: 2)
         )
         .onDrag {
-            if let eventId = event.eventIdentifier {
-                return NSItemProvider(object: eventId as NSString)
+            guard let eventId = event.eventIdentifier else {
+                return NSItemProvider()
             }
-            return NSItemProvider()
+            let provider = NSItemProvider()
+            provider.registerDataRepresentation(forTypeIdentifier: "public.text", visibility: .all) { completion in
+                let data = eventId.data(using: .utf8)
+                completion(data, nil)
+                return nil
+            }
+            return provider
         }
     }
 }

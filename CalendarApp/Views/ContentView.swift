@@ -205,8 +205,8 @@ struct ContentView: View {
             .buttonStyle(.borderless)
 
             Text(headerTitle)
-                .font(.system(size: 24, weight: .semibold))
-                .frame(minWidth: 200)
+                .font(.system(size: 32, weight: .bold))
+                .frame(minWidth: 250)
         }
     }
 
