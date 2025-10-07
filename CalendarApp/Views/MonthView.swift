@@ -8,6 +8,8 @@ struct MonthView: View {
     let weatherForecasts: [DailyWeatherInfo]
     let onDateDoubleClick: (Date) -> Void
 
+    @State private var draggedEvent: EKEvent?
+
     private var calendar: Calendar {
         var cal = Calendar.current
         cal.firstWeekday = 2 // Monday = 2 (Sunday = 1)
@@ -44,7 +46,8 @@ struct MonthView: View {
                             currentMonth: isInCurrentMonth(date),
                             highlightedEventIDs: highlightedEventIDs,
                             weatherForecasts: weatherForecasts,
-                            onDoubleClick: onDateDoubleClick
+                            onDoubleClick: onDateDoubleClick,
+                            draggedEvent: $draggedEvent
                         )
                         .frame(height: cellHeight)
                     }
@@ -84,6 +87,7 @@ struct DayCell: View {
     let highlightedEventIDs: Set<String>
     let weatherForecasts: [DailyWeatherInfo]
     let onDoubleClick: (Date) -> Void
+    @Binding var draggedEvent: EKEvent?
 
     @State private var isDropTarget = false
 
@@ -130,8 +134,13 @@ struct DayCell: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 2) {
                     ForEach(Array(dayEvents.prefix(3).enumerated()), id: \.offset) { _, event in
-                        EventBadge(event: event, compact: true, isHighlighted: event.eventIdentifier.map { highlightedEventIDs.contains($0) } ?? false)
-                            .contentShape(Rectangle())
+                        EventBadge(
+                            event: event,
+                            compact: true,
+                            isHighlighted: event.eventIdentifier.map { highlightedEventIDs.contains($0) } ?? false,
+                            draggedEvent: $draggedEvent
+                        )
+                        .contentShape(Rectangle())
                     }
 
                     if dayEvents.count > 3 {
@@ -169,42 +178,28 @@ struct DayCell: View {
         .onTapGesture(count: 2) {
             onDoubleClick(date)
         }
-        .onDrop(of: [.text], isTargeted: $isDropTarget) { providers in
+        .onDrop(of: [.text], isTargeted: $isDropTarget) { _ in
             print("Drop received on date: \(date)")
-            guard let provider = providers.first else {
-                print("No provider")
+            guard let event = draggedEvent else {
+                print("No dragged event")
                 return false
             }
 
-            Task {
-                do {
-                    if let eventId = try await provider.loadItem(forTypeIdentifier: "public.plain-text") as? String {
-                        print("Loaded event ID: \(eventId)")
-                        guard let event = calendarManager.events.first(where: { $0.eventIdentifier == eventId }) else {
-                            print("Event not found with ID: \(eventId)")
-                            return
-                        }
+            print("Moving event: \(event.title ?? "Unknown")")
 
-                        await MainActor.run {
-                            let targetDate = calendar.startOfDay(for: date)
-                            let originalStartOfDay = calendar.startOfDay(for: event.startDate)
-                            let timeOffset = event.startDate.timeIntervalSince(originalStartOfDay)
-                            let newStartDate = targetDate.addingTimeInterval(timeOffset)
+            let targetDate = calendar.startOfDay(for: date)
+            let originalStartOfDay = calendar.startOfDay(for: event.startDate)
+            let timeOffset = event.startDate.timeIntervalSince(originalStartOfDay)
+            let newStartDate = targetDate.addingTimeInterval(timeOffset)
 
-                            do {
-                                try calendarManager.moveEvent(event, to: newStartDate)
-                                print("Successfully moved event")
-                            } catch {
-                                print("Error moving event: \(error)")
-                            }
-                        }
-                    } else {
-                        print("Failed to load as string")
-                    }
-                } catch {
-                    print("Error loading item: \(error)")
-                }
+            do {
+                try calendarManager.moveEvent(event, to: newStartDate)
+                print("Successfully moved event to \(newStartDate)")
+                draggedEvent = nil
+            } catch {
+                print("Error moving event: \(error)")
             }
+
             return true
         }
     }
@@ -239,6 +234,7 @@ struct EventBadge: View {
     let event: EKEvent
     let compact: Bool
     let isHighlighted: Bool
+    @Binding var draggedEvent: EKEvent?
 
     var body: some View {
         HStack(alignment: .top, spacing: 4) {
@@ -267,14 +263,9 @@ struct EventBadge: View {
         )
         .onDrag {
             print("Drag started for event: \(event.title ?? "Unknown")")
-            guard let eventId = event.eventIdentifier else {
-                print("No event identifier")
-                return NSItemProvider()
-            }
-
-            let itemProvider = NSItemProvider(object: eventId as NSString)
-            print("Created item provider with ID: \(eventId)")
-            return itemProvider
+            draggedEvent = event
+            // Return a dummy provider - we're using the draggedEvent state instead
+            return NSItemProvider(object: "drag" as NSString)
         }
     }
 }
