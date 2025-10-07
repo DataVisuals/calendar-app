@@ -108,7 +108,16 @@ struct ContentView: View {
             .padding()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.black.opacity(0.3))
+        .background(
+            Color.black.opacity(0.3)
+                .background(
+                    Button("") {
+                        closeSearch()
+                    }
+                    .keyboardShortcut(.escape, modifiers: [])
+                    .hidden()
+                )
+        )
         .onTapGesture {
             closeSearch()
         }
