@@ -29,7 +29,7 @@ struct RemindersSection: View {
                                 .font(.system(size: 15 * calendarManager.fontSize.scale, weight: .medium))
                                 .foregroundColor(.secondary)
 
-                            ForEach(groupedReminders[listTitle] ?? [], id: \.calendarItemIdentifier) { reminder in
+                            ForEach(groupedReminders[listTitle] ?? [], id: \.self) { reminder in
                                 ReminderRow(reminder: reminder)
                             }
                         }
@@ -42,7 +42,7 @@ struct RemindersSection: View {
 
     private var groupedReminders: [String: [EKReminder]] {
         Dictionary(grouping: calendarManager.reminders) { reminder in
-            reminder.calendar.title
+            reminder.calendar?.title ?? "No List"
         }
     }
 }

@@ -134,7 +134,7 @@ class CalendarManager: ObservableObject {
         let predicate = eventStore.predicateForReminders(in: nil)
         eventStore.fetchReminders(matching: predicate) { [weak self] reminders in
             DispatchQueue.main.async {
-                self?.reminders = reminders?.filter { !$0.isCompleted } ?? []
+                self?.reminders = reminders?.filter { !$0.isCompleted && $0.calendar != nil } ?? []
             }
         }
     }
