@@ -1,6 +1,13 @@
 import Foundation
 import EventKit
 
+struct EventProperties {
+    let title: String
+    let startDate: Date
+    let endDate: Date
+    let calendarIdentifier: String
+}
+
 enum FontSize: String, CaseIterable {
     case small = "Small"
     case medium = "Medium"
@@ -45,7 +52,17 @@ class CalendarManager: ObservableObject {
     @Published var hasAccess = false
     @Published var fontSize: FontSize = .medium
     @Published var temperatureUnit: TemperatureUnit = .celsius
-    @Published var defaultCalendar: EKCalendar?
+
+    @Published var defaultCalendar: EKCalendar? {
+        didSet {
+            // Save calendar identifier when it changes
+            if let calendar = defaultCalendar {
+                UserDefaults.standard.set(calendar.calendarIdentifier, forKey: "defaultCalendarIdentifier")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "defaultCalendarIdentifier")
+            }
+        }
+    }
 
     let eventStore = EKEventStore()
     private let calendar = Calendar.current
@@ -124,6 +141,12 @@ class CalendarManager: ObservableObject {
 
     func loadCalendars() {
         calendars = eventStore.calendars(for: .event)
+
+        // Restore default calendar from UserDefaults
+        if let savedIdentifier = UserDefaults.standard.string(forKey: "defaultCalendarIdentifier"),
+           let savedCalendar = calendars.first(where: { $0.calendarIdentifier == savedIdentifier }) {
+            defaultCalendar = savedCalendar
+        }
     }
 
     func loadEvents() {
@@ -180,25 +203,114 @@ class CalendarManager: ObservableObject {
         loadEvents()
     }
 
-    func moveEvent(_ event: EKEvent, to newDate: Date) throws {
-        // Fetch the event from the store to ensure we're working with the original
-        guard let eventIdentifier = event.eventIdentifier,
-              let originalEvent = eventStore.event(withIdentifier: eventIdentifier) else {
-            // Fallback: use the passed event directly
-            let duration = event.endDate.timeIntervalSince(event.startDate)
-            event.startDate = newDate
-            event.endDate = newDate.addingTimeInterval(duration)
-            try eventStore.save(event, span: .thisEvent, commit: true)
-            loadEvents()
-            return
+    func findEvent(byProperties properties: EventProperties) -> EKEvent? {
+        // Search fresh from the store using a predicate
+        let startDate = properties.startDate.addingTimeInterval(-1) // 1 second tolerance
+        let endDate = properties.endDate.addingTimeInterval(1) // 1 second tolerance
+
+        let predicate = eventStore.predicateForEvents(withStart: startDate, end: endDate, calendars: nil)
+        let matchingEvents = eventStore.events(matching: predicate)
+
+        return matchingEvents.first { event in
+            event.title == properties.title &&
+            abs(event.startDate.timeIntervalSince(properties.startDate)) < 2 &&
+            abs(event.endDate.timeIntervalSince(properties.endDate)) < 2 &&
+            event.calendar.calendarIdentifier == properties.calendarIdentifier
+        }
+    }
+
+    func updateEvent(withIdentifier identifier: String, title: String, startDate: Date, endDate: Date, calendar: EKCalendar?, notes: String?) throws {
+        // Always fetch fresh from store
+        guard let storeEvent = eventStore.event(withIdentifier: identifier) else {
+            throw NSError(domain: "CalendarManager", code: -3, userInfo: [NSLocalizedDescriptionKey: "Event not found in store"])
         }
 
-        let duration = originalEvent.endDate.timeIntervalSince(originalEvent.startDate)
-        originalEvent.startDate = newDate
-        originalEvent.endDate = newDate.addingTimeInterval(duration)
+        print("Found event by ID: '\(storeEvent.title ?? "Untitled")' in calendar '\(storeEvent.calendar.title)'")
+        print("Original calendar: \(storeEvent.calendar.title), new calendar: \(calendar?.title ?? "nil")")
 
-        try eventStore.save(originalEvent, span: .thisEvent, commit: true)
-        loadEvents()
+        // Update properties
+        storeEvent.title = title
+        storeEvent.startDate = startDate
+        storeEvent.endDate = endDate
+        storeEvent.notes = notes
+
+        // Update calendar if provided and different
+        if let calendar = calendar, calendar.calendarIdentifier != storeEvent.calendar.calendarIdentifier {
+            print("Changing calendar from '\(storeEvent.calendar.title)' to '\(calendar.title)'")
+            storeEvent.calendar = calendar
+        }
+
+        do {
+            print("Attempting to save event to store")
+            try eventStore.save(storeEvent, span: .thisEvent, commit: true)
+            print("Successfully saved event '\(storeEvent.title ?? "Untitled")' to '\(storeEvent.calendar.title)'")
+        } catch {
+            print("Failed to save event: \(error)")
+            throw error
+        }
+
+        // Reload events to get fresh data
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+            self?.loadEvents()
+        }
+    }
+
+    func updateEvent(byProperties properties: EventProperties, title: String, startDate: Date, endDate: Date, calendar: EKCalendar?, notes: String?) throws {
+        // Always find fresh from the store right before saving
+        guard let event = findEvent(byProperties: properties) else {
+            throw NSError(domain: "CalendarManager", code: -4, userInfo: [NSLocalizedDescriptionKey: "Event not found"])
+        }
+
+        print("Found event by properties: '\(event.title ?? "Untitled")' in calendar '\(event.calendar.title)'")
+        print("Original calendar: \(event.calendar.title), new calendar: \(calendar?.title ?? "nil")")
+
+        // Update properties
+        event.title = title
+        event.startDate = startDate
+        event.endDate = endDate
+        event.notes = notes
+
+        // Update calendar if provided and different
+        if let calendar = calendar, calendar.calendarIdentifier != event.calendar.calendarIdentifier {
+            print("Changing calendar from '\(event.calendar.title)' to '\(calendar.title)'")
+            event.calendar = calendar
+        }
+
+        do {
+            print("Attempting to save event to store")
+            try eventStore.save(event, span: .thisEvent, commit: true)
+            print("Successfully saved event '\(event.title ?? "Untitled")' to '\(event.calendar.title)'")
+        } catch {
+            print("Failed to save event: \(error)")
+            throw error
+        }
+
+        // Reload events to get fresh data
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+            self?.loadEvents()
+        }
+    }
+
+    func moveEvent(_ event: EKEvent, to newDate: Date) throws {
+        // Always fetch fresh from the store to avoid "does not belong to store" error
+        guard let eventIdentifier = event.eventIdentifier else {
+            throw NSError(domain: "CalendarManager", code: -2, userInfo: [NSLocalizedDescriptionKey: "Event has no identifier"])
+        }
+
+        guard let storeEvent = eventStore.event(withIdentifier: eventIdentifier) else {
+            throw NSError(domain: "CalendarManager", code: -3, userInfo: [NSLocalizedDescriptionKey: "Event not found in store"])
+        }
+
+        let duration = storeEvent.endDate.timeIntervalSince(storeEvent.startDate)
+        storeEvent.startDate = newDate
+        storeEvent.endDate = newDate.addingTimeInterval(duration)
+
+        try eventStore.save(storeEvent, span: .thisEvent, commit: true)
+
+        // Reload events to get fresh data
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            self?.loadEvents()
+        }
     }
 }
 

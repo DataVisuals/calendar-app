@@ -36,6 +36,8 @@ struct ContentView: View {
     @State private var currentDate = Date()
     @State private var showingNewEvent = false
     @State private var newEventDate: Date?
+    @State private var eventIdToEdit: String?
+    @State private var eventPropertiesToEdit: EventProperties?
     @State private var showingSearch = false
     @State private var searchText = ""
     @State private var highlightedEventIDs: Set<String> = []
@@ -64,11 +66,13 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showingNewEvent) {
-            NewEventSheet(initialDate: newEventDate)
+            NewEventSheet(initialDate: newEventDate, eventIdToEdit: eventIdToEdit, eventPropertiesToEdit: eventPropertiesToEdit)
         }
         .onChange(of: showingNewEvent) { showing in
             if !showing {
                 newEventDate = nil
+                eventIdToEdit = nil
+                eventPropertiesToEdit = nil
             }
         }
         .onChange(of: currentDate) { _ in
@@ -280,6 +284,21 @@ struct ContentView: View {
                     weatherForecasts: weatherManager.dailyForecasts,
                     onDateDoubleClick: { date in
                         newEventDate = date
+                        showingNewEvent = true
+                    },
+                    onEventDoubleClick: { event in
+                        if let eventId = event.eventIdentifier {
+                            print("Opening event for edit: \(event.title ?? "Untitled") with ID: \(eventId)")
+                            eventIdToEdit = eventId
+                        } else {
+                            print("Event '\(event.title ?? "Untitled")' has no identifier, using properties")
+                            eventPropertiesToEdit = EventProperties(
+                                title: event.title ?? "",
+                                startDate: event.startDate,
+                                endDate: event.endDate,
+                                calendarIdentifier: event.calendar.calendarIdentifier
+                            )
+                        }
                         showingNewEvent = true
                     }
                 )

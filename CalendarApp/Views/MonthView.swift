@@ -7,6 +7,7 @@ struct MonthView: View {
     let highlightedEventIDs: Set<String>
     let weatherForecasts: [DailyWeatherInfo]
     let onDateDoubleClick: (Date) -> Void
+    let onEventDoubleClick: (EKEvent) -> Void
 
     @State private var draggedEvent: EKEvent?
 
@@ -47,6 +48,7 @@ struct MonthView: View {
                             highlightedEventIDs: highlightedEventIDs,
                             weatherForecasts: weatherForecasts,
                             onDoubleClick: onDateDoubleClick,
+                            onEventDoubleClick: onEventDoubleClick,
                             draggedEvent: $draggedEvent
                         )
                         .frame(height: cellHeight)
@@ -87,6 +89,7 @@ struct DayCell: View {
     let highlightedEventIDs: Set<String>
     let weatherForecasts: [DailyWeatherInfo]
     let onDoubleClick: (Date) -> Void
+    let onEventDoubleClick: (EKEvent) -> Void
     @Binding var draggedEvent: EKEvent?
 
     @State private var isDropTarget = false
@@ -138,6 +141,7 @@ struct DayCell: View {
                             event: event,
                             compact: true,
                             isHighlighted: event.eventIdentifier.map { highlightedEventIDs.contains($0) } ?? false,
+                            onDoubleClick: onEventDoubleClick,
                             draggedEvent: $draggedEvent
                         )
                         .contentShape(Rectangle())
@@ -229,6 +233,7 @@ struct EventBadge: View {
     let event: EKEvent
     let compact: Bool
     let isHighlighted: Bool
+    let onDoubleClick: (EKEvent) -> Void
     @Binding var draggedEvent: EKEvent?
 
     var body: some View {
@@ -259,6 +264,9 @@ struct EventBadge: View {
         .onDrag {
             draggedEvent = event
             return NSItemProvider(object: "drag" as NSString)
+        }
+        .onTapGesture(count: 2) {
+            onDoubleClick(event)
         }
     }
 }
