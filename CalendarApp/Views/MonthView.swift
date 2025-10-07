@@ -131,6 +131,7 @@ struct DayCell: View {
                 VStack(alignment: .leading, spacing: 2) {
                     ForEach(Array(dayEvents.prefix(3).enumerated()), id: \.offset) { _, event in
                         EventBadge(event: event, compact: true, isHighlighted: event.eventIdentifier.map { highlightedEventIDs.contains($0) } ?? false)
+                            .contentShape(Rectangle())
                     }
 
                     if dayEvents.count > 3 {
@@ -169,27 +170,39 @@ struct DayCell: View {
             onDoubleClick(date)
         }
         .onDrop(of: [.text], isTargeted: $isDropTarget) { providers in
-            guard let provider = providers.first else { return false }
+            print("Drop received on date: \(date)")
+            guard let provider = providers.first else {
+                print("No provider")
+                return false
+            }
 
-            _ = provider.loadDataRepresentation(forTypeIdentifier: "public.text") { data, error in
-                guard let data = data,
-                      let eventId = String(data: data, encoding: .utf8),
-                      let event = calendarManager.events.first(where: { $0.eventIdentifier == eventId }) else {
-                    print("Failed to load drop data")
-                    return
-                }
+            Task {
+                do {
+                    if let eventId = try await provider.loadItem(forTypeIdentifier: "public.plain-text") as? String {
+                        print("Loaded event ID: \(eventId)")
+                        guard let event = calendarManager.events.first(where: { $0.eventIdentifier == eventId }) else {
+                            print("Event not found with ID: \(eventId)")
+                            return
+                        }
 
-                DispatchQueue.main.async {
-                    let targetDate = calendar.startOfDay(for: date)
-                    let originalStartOfDay = calendar.startOfDay(for: event.startDate)
-                    let timeOffset = event.startDate.timeIntervalSince(originalStartOfDay)
-                    let newStartDate = targetDate.addingTimeInterval(timeOffset)
+                        await MainActor.run {
+                            let targetDate = calendar.startOfDay(for: date)
+                            let originalStartOfDay = calendar.startOfDay(for: event.startDate)
+                            let timeOffset = event.startDate.timeIntervalSince(originalStartOfDay)
+                            let newStartDate = targetDate.addingTimeInterval(timeOffset)
 
-                    do {
-                        try calendarManager.moveEvent(event, to: newStartDate)
-                    } catch {
-                        print("Error moving event: \(error)")
+                            do {
+                                try calendarManager.moveEvent(event, to: newStartDate)
+                                print("Successfully moved event")
+                            } catch {
+                                print("Error moving event: \(error)")
+                            }
+                        }
+                    } else {
+                        print("Failed to load as string")
                     }
+                } catch {
+                    print("Error loading item: \(error)")
                 }
             }
             return true
@@ -253,16 +266,15 @@ struct EventBadge: View {
                 .stroke(isHighlighted ? calendarManager.color(for: event.calendar).opacity(0.8) : Color.clear, lineWidth: 2)
         )
         .onDrag {
+            print("Drag started for event: \(event.title ?? "Unknown")")
             guard let eventId = event.eventIdentifier else {
+                print("No event identifier")
                 return NSItemProvider()
             }
-            let provider = NSItemProvider()
-            provider.registerDataRepresentation(forTypeIdentifier: "public.text", visibility: .all) { completion in
-                let data = eventId.data(using: .utf8)
-                completion(data, nil)
-                return nil
-            }
-            return provider
+
+            let itemProvider = NSItemProvider(object: eventId as NSString)
+            print("Created item provider with ID: \(eventId)")
+            return itemProvider
         }
     }
 }
