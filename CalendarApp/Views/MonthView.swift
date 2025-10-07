@@ -80,12 +80,12 @@ struct DayCell: View {
             // Top row: Weather (left) and Day number (right)
             HStack {
                 // Weather in top left
-                if let forecast = todaysForecast {
+                if let forecast = todaysForecast, !weatherForecasts.isEmpty {
                     HStack(spacing: 2) {
                         Image(systemName: forecast.symbolName)
                             .font(.system(size: 14 * calendarManager.fontSize.scale))
                             .foregroundColor(.blue.opacity(currentMonth ? 0.8 : 0.4))
-                        Text("\(Int(calendarManager.temperatureUnit.convert(forecast.highTemp)))°")
+                        Text(formattedTemperature(forecast.highTemp))
                             .font(.system(size: 14 * calendarManager.fontSize.scale))
                             .foregroundColor(currentMonth ? .primary : .secondary)
                     }
@@ -164,6 +164,11 @@ struct DayCell: View {
         weatherForecasts.first { forecast in
             calendar.isDate(forecast.date, inSameDayAs: date)
         }
+    }
+
+    private func formattedTemperature(_ temp: Double) -> String {
+        let converted = calendarManager.temperatureUnit.convert(temp)
+        return "\(Int(converted))°"
     }
 }
 

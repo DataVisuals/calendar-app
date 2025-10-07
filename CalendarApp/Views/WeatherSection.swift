@@ -60,10 +60,10 @@ struct WeatherDayCard: View {
                 .frame(height: 32)
 
             VStack(spacing: 2) {
-                Text("\(Int(calendarManager.temperatureUnit.convert(forecast.highTemp)))\(calendarManager.temperatureUnit.symbol)")
+                Text(formattedTemp(forecast.highTemp))
                     .font(.system(size: 16 * calendarManager.fontSize.scale, weight: .semibold))
 
-                Text("\(Int(calendarManager.temperatureUnit.convert(forecast.lowTemp)))\(calendarManager.temperatureUnit.symbol)")
+                Text(formattedTemp(forecast.lowTemp))
                     .font(.system(size: 13 * calendarManager.fontSize.scale))
                     .foregroundColor(.secondary)
             }
@@ -80,5 +80,10 @@ struct WeatherDayCard: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEE"
         return formatter.string(from: forecast.date)
+    }
+
+    private func formattedTemp(_ temp: Double) -> String {
+        let converted = calendarManager.temperatureUnit.convert(temp)
+        return "\(Int(converted))\(calendarManager.temperatureUnit.symbol)"
     }
 }
