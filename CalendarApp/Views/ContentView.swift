@@ -31,7 +31,6 @@ enum CalendarViewType: String, CaseIterable {
 
 struct ContentView: View {
     @EnvironmentObject var calendarManager: CalendarManager
-    @StateObject private var weatherManager = WeatherManager()
     @State private var selectedView: CalendarViewType = .month
     @State private var currentDate = Date()
     @State private var showingNewEvent = false
@@ -43,6 +42,9 @@ struct ContentView: View {
     @FocusState private var quickAddFocused: Bool
 
     private let calendar = Calendar.current
+
+    // Weather manager for calendar day cells
+    private let weatherManager = WeatherManager()
 
     var body: some View {
         ZStack {
@@ -165,7 +167,7 @@ struct ContentView: View {
             navigationControls
             Spacer()
             ViewSelectorButtons(selectedView: $selectedView)
-                .frame(width: 450 * calendarManager.fontSize.scale)
+                .frame(width: 450)
             Spacer()
             quickAddField
         }
@@ -177,25 +179,25 @@ struct ContentView: View {
         HStack(spacing: 10) {
             Button(action: goToToday) {
                 Text("Today")
-                    .font(.system(size: 13 * calendarManager.fontSize.scale, weight: .medium))
+                    .font(.system(size: 13, weight: .medium))
                     .padding(.horizontal, 3)
             }
             .buttonStyle(.bordered)
 
             Button(action: previousPeriod) {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 14 * calendarManager.fontSize.scale))
+                    .font(.system(size: 14))
             }
             .buttonStyle(.borderless)
 
             Button(action: nextPeriod) {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 14 * calendarManager.fontSize.scale))
+                    .font(.system(size: 14))
             }
             .buttonStyle(.borderless)
 
             Text(headerTitle)
-                .font(.system(size: 18 * calendarManager.fontSize.scale, weight: .semibold))
+                .font(.system(size: 18, weight: .semibold))
                 .frame(minWidth: 200)
         }
     }
@@ -203,12 +205,12 @@ struct ContentView: View {
     private var quickAddField: some View {
         HStack(spacing: 8) {
             Image(systemName: "plus.circle.fill")
-                .font(.system(size: 16 * calendarManager.fontSize.scale))
+                .font(.system(size: 16))
                 .foregroundColor(.accentColor)
 
-            TextField("Quick add event (e.g., 'Meeting tomorrow at 2pm')", text: $quickAddText)
+            TextField("Quick add event", text: $quickAddText)
                 .textFieldStyle(.plain)
-                .font(.system(size: 14 * calendarManager.fontSize.scale))
+                .font(.system(size: 14))
                 .focused($quickAddFocused)
                 .disabled(!calendarManager.hasAccess)
                 .onSubmit {
@@ -221,7 +223,7 @@ struct ContentView: View {
                 Button(action: { quickAddText = "" }) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.secondary)
-                        .font(.system(size: 14 * calendarManager.fontSize.scale))
+                        .font(.system(size: 14))
                 }
                 .buttonStyle(.plain)
             }
@@ -408,12 +410,10 @@ struct ViewSelectorButton: View {
     let isSelected: Bool
     let action: () -> Void
 
-    @EnvironmentObject var calendarManager: CalendarManager
-
     var body: some View {
         Button(action: action) {
             Text(viewType.rawValue)
-                .font(.system(size: 12 * calendarManager.fontSize.scale, weight: isSelected ? .medium : .regular))
+                .font(.system(size: 12, weight: isSelected ? .medium : .regular))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 5)
                 .frame(maxWidth: .infinity)
