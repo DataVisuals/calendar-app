@@ -244,8 +244,8 @@ struct ContentView: View {
     private var contentArea: some View {
         GeometryReader { geometry in
             VStack(spacing: 0) {
-                // Show bottom panel only if there are reminders
-                if !calendarManager.reminders.isEmpty {
+                // Show bottom panel only if there are valid reminders
+                if calendarManager.hasValidReminders {
                     let bottomPanelHeight = geometry.size.height * 0.2
 
                     calendarView

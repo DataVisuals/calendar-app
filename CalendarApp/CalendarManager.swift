@@ -50,6 +50,10 @@ class CalendarManager: ObservableObject {
     let eventStore = EKEventStore()
     private let calendar = Calendar.current
 
+    var hasValidReminders: Bool {
+        !reminders.filter { $0.calendarItemIdentifier != nil && $0.calendar != nil }.isEmpty
+    }
+
     init() {
         checkAccess()
     }
@@ -134,7 +138,11 @@ class CalendarManager: ObservableObject {
         let predicate = eventStore.predicateForReminders(in: nil)
         eventStore.fetchReminders(matching: predicate) { [weak self] reminders in
             DispatchQueue.main.async {
-                self?.reminders = reminders?.filter { !$0.isCompleted && $0.calendar != nil } ?? []
+                self?.reminders = reminders?.filter {
+                    !$0.isCompleted &&
+                    $0.calendar != nil &&
+                    $0.calendarItemIdentifier != nil
+                } ?? []
             }
         }
     }

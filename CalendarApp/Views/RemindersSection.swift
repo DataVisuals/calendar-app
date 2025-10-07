@@ -11,7 +11,7 @@ struct RemindersSection: View {
                 Text("Reminders")
                     .font(.system(size: 18 * calendarManager.fontSize.scale, weight: .semibold))
                 Spacer()
-                Text("\(calendarManager.reminders.count)")
+                Text("\(validReminders.count)")
                     .font(.system(size: 15 * calendarManager.fontSize.scale))
                     .foregroundColor(.secondary)
             }
@@ -21,27 +21,39 @@ struct RemindersSection: View {
             Divider()
 
             // Reminders list grouped by list
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    ForEach(groupedReminders.keys.sorted(), id: \.self) { listTitle in
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(listTitle)
-                                .font(.system(size: 15 * calendarManager.fontSize.scale, weight: .medium))
-                                .foregroundColor(.secondary)
+            if !validReminders.isEmpty {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        ForEach(groupedReminders.keys.sorted(), id: \.self) { listTitle in
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(listTitle)
+                                    .font(.system(size: 15 * calendarManager.fontSize.scale, weight: .medium))
+                                    .foregroundColor(.secondary)
 
-                            ForEach(groupedReminders[listTitle] ?? [], id: \.self) { reminder in
-                                ReminderRow(reminder: reminder)
+                                ForEach(groupedReminders[listTitle] ?? [], id: \.calendarItemIdentifier) { reminder in
+                                    ReminderRow(reminder: reminder)
+                                }
                             }
                         }
                     }
+                    .padding()
                 }
-                .padding()
+            } else {
+                VStack {
+                    Text("No reminders")
+                        .foregroundColor(.secondary)
+                        .padding()
+                }
             }
         }
     }
 
+    private var validReminders: [EKReminder] {
+        calendarManager.reminders.filter { $0.calendarItemIdentifier != nil && $0.calendar != nil }
+    }
+
     private var groupedReminders: [String: [EKReminder]] {
-        Dictionary(grouping: calendarManager.reminders) { reminder in
+        Dictionary(grouping: validReminders) { reminder in
             reminder.calendar?.title ?? "No List"
         }
     }
