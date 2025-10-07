@@ -40,6 +40,18 @@ class CalendarManager: ObservableObject {
         }
         if hasAccess {
             loadCalendars()
+
+            // Check reminders access
+            let reminderStatus = EKEventStore.authorizationStatus(for: .reminder)
+            let hasReminderAccess: Bool
+            if #available(macOS 14.0, *) {
+                hasReminderAccess = (reminderStatus == .authorized || reminderStatus == .fullAccess)
+            } else {
+                hasReminderAccess = (reminderStatus == .authorized)
+            }
+            if hasReminderAccess {
+                loadReminders()
+            }
         }
     }
 
@@ -51,7 +63,14 @@ class CalendarManager: ObservableObject {
                     if granted {
                         self?.loadCalendars()
                         self?.loadEvents()
-                        self?.loadReminders()
+                        // Request reminders access separately
+                        self?.eventStore.requestFullAccessToReminders { remindersGranted, _ in
+                            DispatchQueue.main.async {
+                                if remindersGranted {
+                                    self?.loadReminders()
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -62,7 +81,14 @@ class CalendarManager: ObservableObject {
                     if granted {
                         self?.loadCalendars()
                         self?.loadEvents()
-                        self?.loadReminders()
+                        // Request reminders access separately
+                        self?.eventStore.requestAccess(to: .reminder) { remindersGranted, _ in
+                            DispatchQueue.main.async {
+                                if remindersGranted {
+                                    self?.loadReminders()
+                                }
+                            }
+                        }
                     }
                 }
             }

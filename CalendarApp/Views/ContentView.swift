@@ -215,13 +215,24 @@ struct ContentView: View {
     private var contentArea: some View {
         GeometryReader { geometry in
             VStack(spacing: 0) {
-                calendarView
-                    .frame(height: calendarManager.reminders.isEmpty ? geometry.size.height : geometry.size.height * 0.7)
+                let hasBottomPanels = !calendarManager.reminders.isEmpty
+                let bottomPanelHeight = hasBottomPanels ? geometry.size.height * 0.3 : 0
 
-                if !calendarManager.reminders.isEmpty {
+                calendarView
+                    .frame(height: geometry.size.height - bottomPanelHeight)
+
+                if hasBottomPanels {
                     Divider()
-                    RemindersSection()
-                        .frame(height: geometry.size.height * 0.3)
+                    HStack(spacing: 0) {
+                        RemindersSection()
+                            .frame(width: geometry.size.width * 0.6)
+
+                        Divider()
+
+                        WeatherSection()
+                            .frame(width: geometry.size.width * 0.4)
+                    }
+                    .frame(height: bottomPanelHeight)
                 }
             }
         }

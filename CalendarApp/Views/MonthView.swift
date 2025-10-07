@@ -84,7 +84,7 @@ struct DayCell: View {
                     .frame(width: 36, height: 36)
                     .background(
                         Circle()
-                            .fill(isToday ? Color.accentColor : Color.clear)
+                            .fill(isToday ? Color.blue : Color.clear)
                     )
                     .padding(.top, 4)
                     .padding(.trailing, 4)

@@ -21,6 +21,9 @@ targets:
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
         NSCalendarsUsageDescription: "This app needs access to your calendars to display and manage events."
         NSRemindersUsageDescription: "This app needs access to your reminders to display and manage tasks."
+        NSLocationUsageDescription: "This app needs your location to display local weather forecasts."
+        NSLocationAlwaysUsageDescription: "This app needs your location to display local weather forecasts."
+        NSLocationWhenInUseUsageDescription: "This app needs your location to display local weather forecasts."
         NSHumanReadableCopyright: ""
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.andrewspruce.CalendarApp

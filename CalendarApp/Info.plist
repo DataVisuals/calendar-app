@@ -26,6 +26,12 @@
 	<string>This app needs access to your calendars to display and manage events.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string></string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>This app needs your location to display local weather forecasts.</string>
+	<key>NSLocationUsageDescription</key>
+	<string>This app needs your location to display local weather forecasts.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs your location to display local weather forecasts.</string>
 	<key>NSRemindersUsageDescription</key>
 	<string>This app needs access to your reminders to display and manage tasks.</string>
 </dict>
