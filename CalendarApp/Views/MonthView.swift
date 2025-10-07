@@ -179,13 +179,9 @@ struct DayCell: View {
             onDoubleClick(date)
         }
         .onDrop(of: [.text], isTargeted: $isDropTarget) { _ in
-            print("Drop received on date: \(date)")
             guard let event = draggedEvent else {
-                print("No dragged event")
                 return false
             }
-
-            print("Moving event: \(event.title ?? "Unknown")")
 
             let targetDate = calendar.startOfDay(for: date)
             let originalStartOfDay = calendar.startOfDay(for: event.startDate)
@@ -194,7 +190,6 @@ struct DayCell: View {
 
             do {
                 try calendarManager.moveEvent(event, to: newStartDate)
-                print("Successfully moved event to \(newStartDate)")
                 draggedEvent = nil
             } catch {
                 print("Error moving event: \(error)")
@@ -262,9 +257,7 @@ struct EventBadge: View {
                 .stroke(isHighlighted ? calendarManager.color(for: event.calendar).opacity(0.8) : Color.clear, lineWidth: 2)
         )
         .onDrag {
-            print("Drag started for event: \(event.title ?? "Unknown")")
             draggedEvent = event
-            // Return a dummy provider - we're using the draggedEvent state instead
             return NSItemProvider(object: "drag" as NSString)
         }
     }

@@ -181,12 +181,23 @@ class CalendarManager: ObservableObject {
     }
 
     func moveEvent(_ event: EKEvent, to newDate: Date) throws {
-        let duration = event.endDate.timeIntervalSince(event.startDate)
+        // Fetch the event from the store to ensure we're working with the original
+        guard let eventIdentifier = event.eventIdentifier,
+              let originalEvent = eventStore.event(withIdentifier: eventIdentifier) else {
+            // Fallback: use the passed event directly
+            let duration = event.endDate.timeIntervalSince(event.startDate)
+            event.startDate = newDate
+            event.endDate = newDate.addingTimeInterval(duration)
+            try eventStore.save(event, span: .thisEvent, commit: true)
+            loadEvents()
+            return
+        }
 
-        event.startDate = newDate
-        event.endDate = newDate.addingTimeInterval(duration)
+        let duration = originalEvent.endDate.timeIntervalSince(originalEvent.startDate)
+        originalEvent.startDate = newDate
+        originalEvent.endDate = newDate.addingTimeInterval(duration)
 
-        try eventStore.save(event, span: .thisEvent)
+        try eventStore.save(originalEvent, span: .thisEvent, commit: true)
         loadEvents()
     }
 }
