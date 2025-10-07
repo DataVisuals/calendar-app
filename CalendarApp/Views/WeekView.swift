@@ -6,7 +6,11 @@ struct WeekView: View {
     @Binding var currentDate: Date
     let highlightedEventIDs: Set<String>
 
-    private let calendar = Calendar.current
+    private var calendar: Calendar {
+        var cal = Calendar.current
+        cal.firstWeekday = 2 // Monday = 2 (Sunday = 1)
+        return cal
+    }
     private let hourHeight: CGFloat = 70
 
     var body: some View {
@@ -76,7 +80,11 @@ struct DayColumn: View {
     let hourHeight: CGFloat
     let highlightedEventIDs: Set<String>
 
-    private let calendar = Calendar.current
+    private var calendar: Calendar {
+        var cal = Calendar.current
+        cal.firstWeekday = 2 // Monday = 2 (Sunday = 1)
+        return cal
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -160,7 +168,11 @@ struct EventBlock: View {
     let date: Date
     let isHighlighted: Bool
 
-    private let calendar = Calendar.current
+    private var calendar: Calendar {
+        var cal = Calendar.current
+        cal.firstWeekday = 2 // Monday = 2 (Sunday = 1)
+        return cal
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {

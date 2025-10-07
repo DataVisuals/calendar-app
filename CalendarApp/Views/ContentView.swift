@@ -42,7 +42,11 @@ struct ContentView: View {
     @State private var quickAddText = ""
     @FocusState private var quickAddFocused: Bool
 
-    private let calendar = Calendar.current
+    private var calendar: Calendar {
+        var cal = Calendar.current
+        cal.firstWeekday = 2 // Monday = 2 (Sunday = 1)
+        return cal
+    }
 
     var body: some View {
         ZStack {

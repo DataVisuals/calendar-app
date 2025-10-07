@@ -8,7 +8,11 @@ struct MultiDayView: View {
     let workweekOnly: Bool
     let highlightedEventIDs: Set<String>
 
-    private let calendar = Calendar.current
+    private var calendar: Calendar {
+        var cal = Calendar.current
+        cal.firstWeekday = 2 // Monday = 2 (Sunday = 1)
+        return cal
+    }
     private let hourHeight: CGFloat = 70
 
     init(currentDate: Binding<Date>, numberOfDays: Int, workweekOnly: Bool = false, highlightedEventIDs: Set<String> = []) {

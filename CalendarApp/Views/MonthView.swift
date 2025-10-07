@@ -7,8 +7,12 @@ struct MonthView: View {
     let highlightedEventIDs: Set<String>
     let weatherForecasts: [DailyWeatherInfo]
 
-    private let calendar = Calendar.current
-    private let daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    private var calendar: Calendar {
+        var cal = Calendar.current
+        cal.firstWeekday = 2 // Monday = 2 (Sunday = 1)
+        return cal
+    }
+    private let daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
     var body: some View {
         GeometryReader { geometry in
@@ -18,7 +22,7 @@ struct MonthView: View {
                     ForEach(Array(daysOfWeek.enumerated()), id: \.element) { index, day in
                         Text(day)
                             .font(.system(size: 16 * calendarManager.fontSize.scale, weight: .semibold))
-                            .foregroundColor(index == 0 || index == 6 ? .accentColor : .secondary)
+                            .foregroundColor(index == 5 || index == 6 ? .accentColor : .secondary)
                             .frame(maxWidth: .infinity)
                     }
                 }
@@ -73,7 +77,11 @@ struct DayCell: View {
     let highlightedEventIDs: Set<String>
     let weatherForecasts: [DailyWeatherInfo]
 
-    private let calendar = Calendar.current
+    private var calendar: Calendar {
+        var cal = Calendar.current
+        cal.firstWeekday = 2 // Monday = 2 (Sunday = 1)
+        return cal
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {

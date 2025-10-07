@@ -6,7 +6,11 @@ struct AgendaView: View {
     @Binding var currentDate: Date
     let highlightedEventIDs: Set<String>
 
-    private let calendar = Calendar.current
+    private var calendar: Calendar {
+        var cal = Calendar.current
+        cal.firstWeekday = 2 // Monday = 2 (Sunday = 1)
+        return cal
+    }
 
     var body: some View {
         ScrollView {
@@ -38,7 +42,11 @@ struct AgendaDaySection: View {
     let date: Date
     let highlightedEventIDs: Set<String>
 
-    private let calendar = Calendar.current
+    private var calendar: Calendar {
+        var cal = Calendar.current
+        cal.firstWeekday = 2 // Monday = 2 (Sunday = 1)
+        return cal
+    }
 
     var body: some View {
         let dayEvents = calendarManager.events(for: date)
