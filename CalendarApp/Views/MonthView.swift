@@ -78,19 +78,19 @@ struct DayCell: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             // Weather and day number
-            HStack(alignment: .top) {
+            HStack(alignment: .center) {
                 // Weather in top left
                 if let forecast = todaysForecast {
                     HStack(spacing: 2) {
                         Image(systemName: forecast.symbolName)
-                            .font(.system(size: 12 * calendarManager.fontSize.scale))
+                            .font(.system(size: 14 * calendarManager.fontSize.scale))
                             .foregroundColor(.secondary)
                         Text(formattedTemperature(forecast.highTemp))
-                            .font(.system(size: 11 * calendarManager.fontSize.scale))
+                            .font(.system(size: 13 * calendarManager.fontSize.scale))
                             .foregroundColor(.secondary)
                     }
+                    .frame(height: 36)
                     .padding(.leading, 4)
-                    .padding(.top, 4)
                 }
 
                 Spacer()
@@ -104,9 +104,9 @@ struct DayCell: View {
                         Circle()
                             .fill(isToday ? Color.blue : Color.clear)
                     )
-                    .padding(.top, 4)
                     .padding(.trailing, 4)
             }
+            .padding(.top, 4)
 
             // Events
             ScrollView {
