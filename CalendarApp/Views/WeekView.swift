@@ -149,7 +149,7 @@ struct DayColumn: View {
     }
 
     private var dayEvents: [EKEvent] {
-        calendarManager.events(for: date).filter { !$0.isAllDay }
+        calendarManager.events(for: date).filter { !$0.isAllDay && $0.eventIdentifier != nil }
     }
 }
 

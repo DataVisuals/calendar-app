@@ -41,7 +41,7 @@ struct AgendaDaySection: View {
     private let calendar = Calendar.current
 
     var body: some View {
-        let dayEvents = calendarManager.events(for: date)
+        let dayEvents = calendarManager.events(for: date).filter { $0.eventIdentifier != nil }
 
         if !dayEvents.isEmpty || calendar.isDateInToday(date) {
             VStack(alignment: .leading, spacing: 8) {

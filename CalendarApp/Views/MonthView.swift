@@ -139,7 +139,7 @@ struct DayCell: View {
     }
 
     private var dayEvents: [EKEvent] {
-        calendarManager.events(for: date)
+        calendarManager.events(for: date).filter { $0.eventIdentifier != nil }
     }
 }
 
