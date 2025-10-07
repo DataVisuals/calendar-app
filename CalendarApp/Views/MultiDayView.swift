@@ -6,14 +6,16 @@ struct MultiDayView: View {
     @Binding var currentDate: Date
     let numberOfDays: Int
     let workweekOnly: Bool
+    let highlightedEventIDs: Set<String>
 
     private let calendar = Calendar.current
     private let hourHeight: CGFloat = 70
 
-    init(currentDate: Binding<Date>, numberOfDays: Int, workweekOnly: Bool = false) {
+    init(currentDate: Binding<Date>, numberOfDays: Int, workweekOnly: Bool = false, highlightedEventIDs: Set<String> = []) {
         self._currentDate = currentDate
         self.numberOfDays = numberOfDays
         self.workweekOnly = workweekOnly
+        self.highlightedEventIDs = highlightedEventIDs
     }
 
     var body: some View {
@@ -43,7 +45,7 @@ struct MultiDayView: View {
                 ScrollView {
                     HStack(spacing: 0) {
                         ForEach(displayDays, id: \.self) { date in
-                            DayColumn(date: date, hourHeight: hourHeight)
+                            DayColumn(date: date, hourHeight: hourHeight, highlightedEventIDs: highlightedEventIDs)
                                 .frame(width: (geometry.size.width - 60) / CGFloat(displayDays.count))
                         }
                     }

@@ -4,6 +4,7 @@ import EventKit
 struct WeekView: View {
     @EnvironmentObject var calendarManager: CalendarManager
     @Binding var currentDate: Date
+    let highlightedEventIDs: Set<String>
 
     private let calendar = Calendar.current
     private let hourHeight: CGFloat = 70
@@ -35,7 +36,7 @@ struct WeekView: View {
                 ScrollView {
                     HStack(spacing: 0) {
                         ForEach(weekDays, id: \.self) { date in
-                            DayColumn(date: date, hourHeight: hourHeight)
+                            DayColumn(date: date, hourHeight: hourHeight, highlightedEventIDs: highlightedEventIDs)
                                 .frame(width: (geometry.size.width - 60) / 7)
                         }
                     }
@@ -73,6 +74,7 @@ struct DayColumn: View {
     @EnvironmentObject var calendarManager: CalendarManager
     let date: Date
     let hourHeight: CGFloat
+    let highlightedEventIDs: Set<String>
 
     private let calendar = Calendar.current
 
@@ -113,7 +115,7 @@ struct DayColumn: View {
 
                 // Events
                 ForEach(dayEvents, id: \.eventIdentifier) { event in
-                    EventBlock(event: event, hourHeight: hourHeight, date: date)
+                    EventBlock(event: event, hourHeight: hourHeight, date: date, isHighlighted: highlightedEventIDs.contains(event.eventIdentifier))
                 }
             }
         }
@@ -156,6 +158,7 @@ struct EventBlock: View {
     let event: EKEvent
     let hourHeight: CGFloat
     let date: Date
+    let isHighlighted: Bool
 
     private let calendar = Calendar.current
 
@@ -181,11 +184,11 @@ struct EventBlock: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 5)
-                .fill(calendarManager.color(for: event.calendar).opacity(0.3))
+                .fill(calendarManager.color(for: event.calendar).opacity(isHighlighted ? 0.5 : 0.3))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 5)
-                .stroke(calendarManager.color(for: event.calendar), lineWidth: 1.5)
+                .stroke(calendarManager.color(for: event.calendar), lineWidth: isHighlighted ? 2.5 : 1.5)
         )
         .offset(y: offsetY)
         .frame(height: height)

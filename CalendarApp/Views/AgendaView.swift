@@ -4,6 +4,7 @@ import EventKit
 struct AgendaView: View {
     @EnvironmentObject var calendarManager: CalendarManager
     @Binding var currentDate: Date
+    let highlightedEventIDs: Set<String>
 
     private let calendar = Calendar.current
 
@@ -11,7 +12,7 @@ struct AgendaView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(upcomingDays, id: \.self) { date in
-                    AgendaDaySection(date: date)
+                    AgendaDaySection(date: date, highlightedEventIDs: highlightedEventIDs)
                 }
             }
             .padding()
@@ -35,6 +36,7 @@ struct AgendaView: View {
 struct AgendaDaySection: View {
     @EnvironmentObject var calendarManager: CalendarManager
     let date: Date
+    let highlightedEventIDs: Set<String>
 
     private let calendar = Calendar.current
 
@@ -78,7 +80,7 @@ struct AgendaDaySection: View {
                 } else {
                     VStack(alignment: .leading, spacing: 6) {
                         ForEach(dayEvents, id: \.eventIdentifier) { event in
-                            AgendaEventRow(event: event)
+                            AgendaEventRow(event: event, isHighlighted: highlightedEventIDs.contains(event.eventIdentifier))
                         }
                     }
                     .padding(.leading, 62)
@@ -105,6 +107,7 @@ struct AgendaDaySection: View {
 struct AgendaEventRow: View {
     @EnvironmentObject var calendarManager: CalendarManager
     let event: EKEvent
+    let isHighlighted: Bool
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -125,7 +128,7 @@ struct AgendaEventRow: View {
             HStack(alignment: .top, spacing: 8) {
                 Rectangle()
                     .fill(calendarManager.color(for: event.calendar))
-                    .frame(width: 4)
+                    .frame(width: isHighlighted ? 6 : 4)
                     .cornerRadius(2)
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -161,7 +164,11 @@ struct AgendaEventRow: View {
         .padding(.horizontal, 12)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(calendarManager.color(for: event.calendar).opacity(0.1))
+                .fill(calendarManager.color(for: event.calendar).opacity(isHighlighted ? 0.25 : 0.1))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(isHighlighted ? calendarManager.color(for: event.calendar).opacity(0.8) : Color.clear, lineWidth: 2)
         )
     }
 

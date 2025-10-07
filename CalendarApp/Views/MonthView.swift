@@ -4,6 +4,7 @@ import EventKit
 struct MonthView: View {
     @EnvironmentObject var calendarManager: CalendarManager
     @Binding var currentDate: Date
+    let highlightedEventIDs: Set<String>
 
     private let calendar = Calendar.current
     private let daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
@@ -32,7 +33,7 @@ struct MonthView: View {
                 // Calendar grid
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 0) {
                     ForEach(getDaysInMonth(), id: \.self) { date in
-                        DayCell(date: date, currentMonth: isInCurrentMonth(date))
+                        DayCell(date: date, currentMonth: isInCurrentMonth(date), highlightedEventIDs: highlightedEventIDs)
                             .frame(height: cellHeight)
                     }
                 }
@@ -68,6 +69,7 @@ struct DayCell: View {
     @EnvironmentObject var calendarManager: CalendarManager
     let date: Date
     let currentMonth: Bool
+    let highlightedEventIDs: Set<String>
 
     private let calendar = Calendar.current
 
@@ -92,7 +94,7 @@ struct DayCell: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 2) {
                     ForEach(dayEvents.prefix(3), id: \.eventIdentifier) { event in
-                        EventBadge(event: event, compact: true)
+                        EventBadge(event: event, compact: true, isHighlighted: highlightedEventIDs.contains(event.eventIdentifier))
                     }
 
                     if dayEvents.count > 3 {
@@ -145,6 +147,7 @@ struct EventBadge: View {
     @EnvironmentObject var calendarManager: CalendarManager
     let event: EKEvent
     let compact: Bool
+    let isHighlighted: Bool
 
     var body: some View {
         HStack(alignment: .top, spacing: 4) {
@@ -165,7 +168,11 @@ struct EventBadge: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 4)
-                .fill(calendarManager.color(for: event.calendar).opacity(0.15))
+                .fill(calendarManager.color(for: event.calendar).opacity(isHighlighted ? 0.35 : 0.15))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(isHighlighted ? calendarManager.color(for: event.calendar).opacity(0.8) : Color.clear, lineWidth: 2)
         )
     }
 }

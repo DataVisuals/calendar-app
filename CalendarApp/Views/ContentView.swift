@@ -36,6 +36,7 @@ struct ContentView: View {
     @State private var showingNewEvent = false
     @State private var showingSearch = false
     @State private var searchText = ""
+    @State private var highlightedEventIDs: Set<String> = []
     @FocusState private var searchFocused: Bool
 
     private let calendar = Calendar.current
@@ -117,21 +118,25 @@ struct ContentView: View {
         showingSearch = false
         searchText = ""
         searchFocused = false
+        highlightedEventIDs.removeAll()
     }
 
     private func searchForEvent(_ query: String) {
         let lowercased = query.lowercased()
 
-        // Search through events
-        if let foundEvent = calendarManager.events.first(where: { event in
+        // Find all matching events
+        let matchingEvents = calendarManager.events.filter { event in
             (event.title?.lowercased().contains(lowercased) ?? false) ||
             (event.location?.lowercased().contains(lowercased) ?? false) ||
             (event.notes?.lowercased().contains(lowercased) ?? false)
-        }) {
-            // Navigate to the event's date
-            if let startDate = foundEvent.startDate {
-                currentDate = startDate
-            }
+        }
+
+        // Store highlighted event IDs
+        highlightedEventIDs = Set(matchingEvents.compactMap { $0.eventIdentifier })
+
+        // Navigate to the first match's date
+        if let foundEvent = matchingEvents.first, let startDate = foundEvent.startDate {
+            currentDate = startDate
         }
     }
 
@@ -148,7 +153,7 @@ struct ContentView: View {
             navigationControls
             Spacer()
             ViewSelectorButtons(selectedView: $selectedView)
-                .frame(width: 450)
+                .frame(width: 450 * calendarManager.fontSize.scale)
             Spacer()
             newEventButton
         }
@@ -217,15 +222,15 @@ struct ContentView: View {
         ZStack {
             switch selectedView {
             case .month:
-                MonthView(currentDate: $currentDate)
+                MonthView(currentDate: $currentDate, highlightedEventIDs: highlightedEventIDs)
             case .week:
-                WeekView(currentDate: $currentDate)
+                WeekView(currentDate: $currentDate, highlightedEventIDs: highlightedEventIDs)
             case .workweek:
-                MultiDayView(currentDate: $currentDate, numberOfDays: 5, workweekOnly: true)
+                MultiDayView(currentDate: $currentDate, numberOfDays: 5, workweekOnly: true, highlightedEventIDs: highlightedEventIDs)
             case .threeDay:
-                MultiDayView(currentDate: $currentDate, numberOfDays: 3)
+                MultiDayView(currentDate: $currentDate, numberOfDays: 3, highlightedEventIDs: highlightedEventIDs)
             case .agenda:
-                AgendaView(currentDate: $currentDate)
+                AgendaView(currentDate: $currentDate, highlightedEventIDs: highlightedEventIDs)
             }
         }
     }
