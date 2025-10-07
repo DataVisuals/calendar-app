@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct WeatherSection: View {
-    @EnvironmentObject var weatherManager: WeatherManager
     @EnvironmentObject var calendarManager: CalendarManager
+    @StateObject private var weatherManager = WeatherManager()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -20,20 +20,7 @@ struct WeatherSection: View {
 
             Divider()
 
-            if !weatherManager.hasLocationPermission {
-                VStack(spacing: 12) {
-                    Text("Location access needed for weather")
-                        .font(.system(size: 14 * calendarManager.fontSize.scale))
-                        .foregroundColor(.secondary)
-
-                    Button("Grant Access") {
-                        weatherManager.requestLocationPermission()
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-                .frame(maxWidth: .infinity)
-                .padding()
-            } else if weatherManager.dailyForecasts.isEmpty {
+            if weatherManager.dailyForecasts.isEmpty {
                 VStack(spacing: 8) {
                     ProgressView()
                         .scaleEffect(0.8)
