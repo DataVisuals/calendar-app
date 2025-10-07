@@ -31,6 +31,7 @@ enum CalendarViewType: String, CaseIterable {
 
 struct ContentView: View {
     @EnvironmentObject var calendarManager: CalendarManager
+    @StateObject private var weatherManager = WeatherManager()
     @State private var selectedView: CalendarViewType = .month
     @State private var currentDate = Date()
     @State private var showingNewEvent = false
@@ -230,11 +231,11 @@ struct ContentView: View {
 
                         Divider()
 
-                        WeatherSection()
+                        WeatherSection(weatherManager: weatherManager)
                             .frame(width: geometry.size.width * 0.4)
                     } else {
                         // Just show weather if no reminders
-                        WeatherSection()
+                        WeatherSection(weatherManager: weatherManager)
                             .frame(maxWidth: .infinity)
                     }
                 }
@@ -247,7 +248,7 @@ struct ContentView: View {
         ZStack {
             switch selectedView {
             case .month:
-                MonthView(currentDate: $currentDate, highlightedEventIDs: highlightedEventIDs)
+                MonthView(currentDate: $currentDate, highlightedEventIDs: highlightedEventIDs, weatherForecasts: weatherManager.dailyForecasts)
             case .week:
                 WeekView(currentDate: $currentDate, highlightedEventIDs: highlightedEventIDs)
             case .workweek:

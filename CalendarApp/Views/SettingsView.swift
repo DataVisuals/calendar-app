@@ -49,6 +49,26 @@ struct SettingsView: View {
                         .font(.system(size: 13))
                         .foregroundColor(.secondary)
                 }
+
+                Divider()
+
+                // Temperature Unit
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Temperature Unit")
+                        .font(.system(size: 16, weight: .semibold))
+
+                    Picker("", selection: $calendarManager.temperatureUnit) {
+                        ForEach(TemperatureUnit.allCases, id: \.self) { unit in
+                            Text(unit.rawValue).tag(unit)
+                        }
+                    }
+                    .pickerStyle(.radioGroup)
+                    .labelsHidden()
+
+                    Text("Temperature display in weather forecasts")
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                }
             }
 
             Spacer()

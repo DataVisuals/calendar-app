@@ -17,12 +17,34 @@ enum FontSize: String, CaseIterable {
     }
 }
 
+enum TemperatureUnit: String, CaseIterable {
+    case celsius = "Celsius"
+    case fahrenheit = "Fahrenheit"
+
+    func convert(_ fahrenheit: Double) -> Double {
+        switch self {
+        case .celsius:
+            return (fahrenheit - 32) * 5 / 9
+        case .fahrenheit:
+            return fahrenheit
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .celsius: return "°C"
+        case .fahrenheit: return "°F"
+        }
+    }
+}
+
 class CalendarManager: ObservableObject {
     @Published var events: [EKEvent] = []
     @Published var calendars: [EKCalendar] = []
     @Published var reminders: [EKReminder] = []
     @Published var hasAccess = false
     @Published var fontSize: FontSize = .medium
+    @Published var temperatureUnit: TemperatureUnit = .celsius
 
     let eventStore = EKEventStore()
     private let calendar = Calendar.current

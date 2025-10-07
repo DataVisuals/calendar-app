@@ -2,7 +2,7 @@ import SwiftUI
 
 struct WeatherSection: View {
     @EnvironmentObject var calendarManager: CalendarManager
-    @StateObject private var weatherManager = WeatherManager()
+    @ObservedObject var weatherManager: WeatherManager
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -60,10 +60,10 @@ struct WeatherDayCard: View {
                 .frame(height: 32)
 
             VStack(spacing: 2) {
-                Text("\(Int(forecast.highTemp))°")
+                Text("\(Int(calendarManager.temperatureUnit.convert(forecast.highTemp)))\(calendarManager.temperatureUnit.symbol)")
                     .font(.system(size: 16 * calendarManager.fontSize.scale, weight: .semibold))
 
-                Text("\(Int(forecast.lowTemp))°")
+                Text("\(Int(calendarManager.temperatureUnit.convert(forecast.lowTemp)))\(calendarManager.temperatureUnit.symbol)")
                     .font(.system(size: 13 * calendarManager.fontSize.scale))
                     .foregroundColor(.secondary)
             }
