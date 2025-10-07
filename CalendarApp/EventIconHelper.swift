@@ -15,7 +15,7 @@ struct EventIconHelper {
 
         // Diwali
         if combined.contains("diwali") {
-            return "candle.fill"
+            return "light.beacon.max.fill"
         }
 
         // Guy Fawkes / Bonfire Night
