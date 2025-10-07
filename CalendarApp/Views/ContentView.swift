@@ -39,6 +39,8 @@ struct ContentView: View {
     @State private var searchText = ""
     @State private var highlightedEventIDs: Set<String> = []
     @FocusState private var searchFocused: Bool
+    @State private var quickAddText = ""
+    @FocusState private var quickAddFocused: Bool
 
     private let calendar = Calendar.current
 
@@ -165,81 +167,92 @@ struct ContentView: View {
             ViewSelectorButtons(selectedView: $selectedView)
                 .frame(width: 450 * calendarManager.fontSize.scale)
             Spacer()
-            newEventButton
+            quickAddField
         }
-        .padding(16)
+        .padding(12)
         .background(Color(NSColor.controlBackgroundColor))
     }
 
     private var navigationControls: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             Button(action: goToToday) {
                 Text("Today")
-                    .font(.system(size: 15 * calendarManager.fontSize.scale, weight: .medium))
-                    .padding(.horizontal, 4)
+                    .font(.system(size: 13 * calendarManager.fontSize.scale, weight: .medium))
+                    .padding(.horizontal, 3)
             }
             .buttonStyle(.bordered)
 
             Button(action: previousPeriod) {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 16 * calendarManager.fontSize.scale))
+                    .font(.system(size: 14 * calendarManager.fontSize.scale))
             }
             .buttonStyle(.borderless)
 
             Button(action: nextPeriod) {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 16 * calendarManager.fontSize.scale))
+                    .font(.system(size: 14 * calendarManager.fontSize.scale))
             }
             .buttonStyle(.borderless)
 
             Text(headerTitle)
-                .font(.system(size: 22 * calendarManager.fontSize.scale, weight: .semibold))
-                .frame(minWidth: 250)
+                .font(.system(size: 18 * calendarManager.fontSize.scale, weight: .semibold))
+                .frame(minWidth: 200)
         }
     }
 
-    private var newEventButton: some View {
-        Button(action: { showingNewEvent = true }) {
-            HStack(spacing: 6) {
-                Image(systemName: "plus")
-                    .font(.system(size: 14 * calendarManager.fontSize.scale))
-                Text("New Event")
-                    .font(.system(size: 15 * calendarManager.fontSize.scale, weight: .medium))
+    private var quickAddField: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "plus.circle.fill")
+                .font(.system(size: 16 * calendarManager.fontSize.scale))
+                .foregroundColor(.accentColor)
+
+            TextField("Quick add event (e.g., 'Meeting tomorrow at 2pm')", text: $quickAddText)
+                .textFieldStyle(.plain)
+                .font(.system(size: 14 * calendarManager.fontSize.scale))
+                .focused($quickAddFocused)
+                .onSubmit {
+                    createQuickEvent()
+                }
+
+            if !quickAddText.isEmpty {
+                Button(action: { quickAddText = "" }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                        .font(.system(size: 14 * calendarManager.fontSize.scale))
+                }
+                .buttonStyle(.plain)
             }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
         }
-        .buttonStyle(.borderedProminent)
-        .keyboardShortcut("n", modifiers: [.command])
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(NSColor.textBackgroundColor))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(quickAddFocused ? Color.accentColor : Color.clear, lineWidth: 2)
+        )
+        .frame(minWidth: 350)
     }
 
     private var contentArea: some View {
         GeometryReader { geometry in
             VStack(spacing: 0) {
-                // Always show bottom panel with weather and reminders
-                let bottomPanelHeight = geometry.size.height * 0.25
+                // Show bottom panel only if there are reminders
+                if !calendarManager.reminders.isEmpty {
+                    let bottomPanelHeight = geometry.size.height * 0.2
 
-                calendarView
-                    .frame(height: geometry.size.height - bottomPanelHeight)
+                    calendarView
+                        .frame(height: geometry.size.height - bottomPanelHeight)
 
-                Divider()
+                    Divider()
 
-                HStack(spacing: 0) {
-                    if !calendarManager.reminders.isEmpty {
-                        RemindersSection()
-                            .frame(width: geometry.size.width * 0.6)
-
-                        Divider()
-
-                        WeatherSection(weatherManager: weatherManager)
-                            .frame(width: geometry.size.width * 0.4)
-                    } else {
-                        // Just show weather if no reminders
-                        WeatherSection(weatherManager: weatherManager)
-                            .frame(maxWidth: .infinity)
-                    }
+                    RemindersSection()
+                        .frame(height: bottomPanelHeight)
+                } else {
+                    calendarView
                 }
-                .frame(height: bottomPanelHeight)
             }
         }
     }
@@ -292,6 +305,46 @@ struct ContentView: View {
 
     private func goToToday() {
         currentDate = Date()
+    }
+
+    private func createQuickEvent() {
+        guard !quickAddText.isEmpty else { return }
+
+        let parser = NaturalLanguageParser()
+
+        if let parsed = parser.parseEventInput(quickAddText) {
+            do {
+                try calendarManager.createEvent(
+                    title: parsed.title,
+                    startDate: parsed.startDate,
+                    endDate: parsed.endDate,
+                    calendar: nil,
+                    notes: parsed.notes
+                )
+                quickAddText = ""
+                quickAddFocused = false
+            } catch {
+                print("Error creating quick event: \(error)")
+            }
+        } else {
+            // Fallback: create event with raw text as title
+            let startDate = Date()
+            let endDate = calendar.date(byAdding: .hour, value: 1, to: startDate) ?? startDate
+
+            do {
+                try calendarManager.createEvent(
+                    title: quickAddText,
+                    startDate: startDate,
+                    endDate: endDate,
+                    calendar: nil,
+                    notes: nil
+                )
+                quickAddText = ""
+                quickAddFocused = false
+            } catch {
+                print("Error creating quick event: \(error)")
+            }
+        }
     }
 
     private func previousPeriod() {
@@ -357,9 +410,9 @@ struct ViewSelectorButton: View {
     var body: some View {
         Button(action: action) {
             Text(viewType.rawValue)
-                .font(.system(size: 14 * calendarManager.fontSize.scale, weight: isSelected ? .medium : .regular))
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
+                .font(.system(size: 12 * calendarManager.fontSize.scale, weight: isSelected ? .medium : .regular))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
                 .frame(maxWidth: .infinity)
                 .background(
                     RoundedRectangle(cornerRadius: 6)

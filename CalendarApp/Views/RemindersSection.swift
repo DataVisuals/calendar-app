@@ -73,10 +73,6 @@ struct ReminderRow: View {
                             .font(.system(size: 13 * calendarManager.fontSize.scale))
                     }
                     .foregroundColor(isOverdue(dueDate) ? .red : .secondary)
-                } else {
-                    Text("No date")
-                        .font(.system(size: 13 * calendarManager.fontSize.scale))
-                        .foregroundColor(.secondary)
                 }
 
                 if reminder.priority > 0 {
@@ -92,11 +88,15 @@ struct ReminderRow: View {
 
             Spacer()
         }
-        .padding(10)
+        .padding(hasDate ? 10 : 6)
         .background(
             RoundedRectangle(cornerRadius: 6)
                 .fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
         )
+    }
+
+    private var hasDate: Bool {
+        reminder.dueDateComponents?.date != nil
     }
 
     private var priorityLevel: Int {

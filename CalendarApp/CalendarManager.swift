@@ -45,6 +45,7 @@ class CalendarManager: ObservableObject {
     @Published var hasAccess = false
     @Published var fontSize: FontSize = .medium
     @Published var temperatureUnit: TemperatureUnit = .celsius
+    @Published var defaultCalendar: EKCalendar?
 
     let eventStore = EKEventStore()
     private let calendar = Calendar.current
@@ -160,7 +161,7 @@ class CalendarManager: ObservableObject {
         event.title = title
         event.startDate = startDate
         event.endDate = endDate
-        event.calendar = calendar ?? eventStore.defaultCalendarForNewEvents
+        event.calendar = calendar ?? defaultCalendar ?? eventStore.defaultCalendarForNewEvents
         event.notes = notes
 
         try eventStore.save(event, span: .thisEvent)

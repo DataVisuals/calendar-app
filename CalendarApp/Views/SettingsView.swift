@@ -69,11 +69,39 @@ struct SettingsView: View {
                         .font(.system(size: 13))
                         .foregroundColor(.secondary)
                 }
+
+                Divider()
+
+                // Default Calendar
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Default Calendar")
+                        .font(.system(size: 16, weight: .semibold))
+
+                    if !calendarManager.calendars.isEmpty {
+                        Picker("", selection: $calendarManager.defaultCalendar) {
+                            Text("System Default").tag(nil as EKCalendar?)
+                            ForEach(calendarManager.calendars, id: \.calendarIdentifier) { calendar in
+                                Text(calendar.title).tag(calendar as EKCalendar?)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .labelsHidden()
+
+                        Text("Calendar for quick add events")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("No calendars available")
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
 
             Spacer()
         }
         .padding()
-        .frame(width: 450, height: 400)
+        .frame(width: 450, height: 500)
     }
 }
+
+import EventKit
