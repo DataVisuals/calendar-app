@@ -5,7 +5,6 @@ struct MonthView: View {
     @EnvironmentObject var calendarManager: CalendarManager
     @Binding var currentDate: Date
     let highlightedEventIDs: Set<String>
-    let weatherForecasts: [DailyWeatherInfo]
 
     private let calendar = Calendar.current
     private let daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
@@ -34,7 +33,7 @@ struct MonthView: View {
                 // Calendar grid
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 0) {
                     ForEach(getDaysInMonth(), id: \.self) { date in
-                        DayCell(date: date, currentMonth: isInCurrentMonth(date), highlightedEventIDs: highlightedEventIDs, weatherForecasts: weatherForecasts)
+                        DayCell(date: date, currentMonth: isInCurrentMonth(date), highlightedEventIDs: highlightedEventIDs)
                             .frame(height: cellHeight)
                     }
                 }
@@ -71,31 +70,14 @@ struct DayCell: View {
     let date: Date
     let currentMonth: Bool
     let highlightedEventIDs: Set<String>
-    let weatherForecasts: [DailyWeatherInfo]
 
     private let calendar = Calendar.current
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            // Top row: Weather (left) and Day number (right)
+            // Day number
             HStack {
-                // Weather in top left
-                if let forecast = todaysForecast, !weatherForecasts.isEmpty {
-                    HStack(spacing: 2) {
-                        Image(systemName: forecast.symbolName)
-                            .font(.system(size: 14 * calendarManager.fontSize.scale))
-                            .foregroundColor(.blue.opacity(currentMonth ? 0.8 : 0.4))
-                        Text(formattedTemperature(forecast.highTemp))
-                            .font(.system(size: 14 * calendarManager.fontSize.scale))
-                            .foregroundColor(currentMonth ? .primary : .secondary)
-                    }
-                    .padding(.top, 4)
-                    .padding(.leading, 4)
-                }
-
                 Spacer()
-
-                // Day number in top right
                 Text("\(calendar.component(.day, from: date))")
                     .font(.system(size: 20 * calendarManager.fontSize.scale, weight: isToday ? .bold : .regular))
                     .foregroundColor(currentMonth ? (isToday ? .white : .primary) : .secondary)
@@ -158,17 +140,6 @@ struct DayCell: View {
 
     private var dayEvents: [EKEvent] {
         calendarManager.events(for: date)
-    }
-
-    private var todaysForecast: DailyWeatherInfo? {
-        weatherForecasts.first { forecast in
-            calendar.isDate(forecast.date, inSameDayAs: date)
-        }
-    }
-
-    private func formattedTemperature(_ temp: Double) -> String {
-        let converted = calendarManager.temperatureUnit.convert(temp)
-        return "\(Int(converted))°"
     }
 }
 

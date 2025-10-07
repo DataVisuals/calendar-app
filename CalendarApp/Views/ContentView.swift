@@ -40,7 +40,6 @@ struct ContentView: View {
     @FocusState private var searchFocused: Bool
     @State private var quickAddText = ""
     @FocusState private var quickAddFocused: Bool
-    @State private var weatherForecasts: [DailyWeatherInfo] = []
 
     private let calendar = Calendar.current
 
@@ -72,29 +71,9 @@ struct ContentView: View {
         .onAppear {
             calendarManager.loadEvents()
             calendarManager.loadReminders()
-            generateWeatherForecasts()
         }
         .applyViewShortcuts(selectedView: $selectedView)
         .applySearchShortcut(showingSearch: $showingSearch, searchFocused: $searchFocused)
-    }
-
-    private func generateWeatherForecasts() {
-        let calendar = Calendar.current
-        let today = Date()
-
-        weatherForecasts = (0..<7).map { dayOffset in
-            let date = calendar.date(byAdding: .day, value: dayOffset, to: today) ?? today
-            let baseTemp = 65.0
-            let variation = Double.random(in: -10...10)
-
-            return DailyWeatherInfo(
-                date: date,
-                highTemp: baseTemp + variation + 10,
-                lowTemp: baseTemp + variation - 5,
-                condition: ["Sunny", "Partly Cloudy", "Cloudy", "Rain"].randomElement() ?? "Sunny",
-                symbolName: ["sun.max.fill", "cloud.sun.fill", "cloud.fill", "cloud.rain.fill"].randomElement() ?? "sun.max.fill"
-            )
-        }
     }
 
     private var searchOverlay: some View {
@@ -284,7 +263,7 @@ struct ContentView: View {
         ZStack {
             switch selectedView {
             case .month:
-                MonthView(currentDate: $currentDate, highlightedEventIDs: highlightedEventIDs, weatherForecasts: weatherForecasts)
+                MonthView(currentDate: $currentDate, highlightedEventIDs: highlightedEventIDs)
             case .week:
                 WeekView(currentDate: $currentDate, highlightedEventIDs: highlightedEventIDs)
             case .workweek:
