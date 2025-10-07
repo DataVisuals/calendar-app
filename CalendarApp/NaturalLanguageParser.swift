@@ -38,8 +38,11 @@ class NaturalLanguageParser {
             if let days = extractNumber(from: matchText) {
                 startDate = calendar.date(byAdding: .day, value: days, to: Date())
             }
-        } else if let match = text.range(of: #"next (monday|tuesday|wednesday|thursday|friday|saturday|sunday)"#, options: .regularExpression) {
+        } else if let match = text.range(of: #"next (monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)"#, options: .regularExpression) {
             let dayName = String(text[match]).replacingOccurrences(of: "next ", with: "")
+            startDate = nextWeekday(dayName)
+        } else if let match = text.range(of: #"on (monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)"#, options: .regularExpression) {
+            let dayName = String(text[match]).replacingOccurrences(of: "on ", with: "")
             startDate = nextWeekday(dayName)
         }
 
@@ -92,7 +95,7 @@ class NaturalLanguageParser {
 
         // Extract title (everything before time/date markers)
         var title = input
-        let markers = ["tomorrow", "today", "next", "at ", "for ", "in "]
+        let markers = ["tomorrow", "today", "next ", "on monday", "on tuesday", "on wednesday", "on thursday", "on friday", "on saturday", "on sunday", "on mon", "on tue", "on wed", "on thu", "on fri", "on sat", "on sun", "at ", "for ", "in "]
         for marker in markers {
             if let range = title.lowercased().range(of: marker) {
                 title = String(title[..<range.lowerBound])
@@ -115,7 +118,9 @@ class NaturalLanguageParser {
 
     private func nextWeekday(_ dayName: String) -> Date? {
         let weekdays = ["sunday": 1, "monday": 2, "tuesday": 3, "wednesday": 4,
-                       "thursday": 5, "friday": 6, "saturday": 7]
+                       "thursday": 5, "friday": 6, "saturday": 7,
+                       "sun": 1, "mon": 2, "tue": 3, "wed": 4,
+                       "thu": 5, "fri": 6, "sat": 7]
 
         guard let targetWeekday = weekdays[dayName.lowercased()] else {
             return nil

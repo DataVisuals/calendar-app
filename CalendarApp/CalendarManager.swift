@@ -1,5 +1,6 @@
 import Foundation
 import EventKit
+import Combine
 
 struct EventProperties {
     let title: String
@@ -52,17 +53,7 @@ class CalendarManager: ObservableObject {
     @Published var hasAccess = false
     @Published var fontSize: FontSize = .medium
     @Published var temperatureUnit: TemperatureUnit = .celsius
-
-    @Published var defaultCalendar: EKCalendar? {
-        didSet {
-            // Save calendar identifier when it changes
-            if let calendar = defaultCalendar {
-                UserDefaults.standard.set(calendar.calendarIdentifier, forKey: "defaultCalendarIdentifier")
-            } else {
-                UserDefaults.standard.removeObject(forKey: "defaultCalendarIdentifier")
-            }
-        }
-    }
+    @Published var defaultCalendar: EKCalendar?
 
     let eventStore = EKEventStore()
     private let calendar = Calendar.current
@@ -73,7 +64,22 @@ class CalendarManager: ObservableObject {
 
     init() {
         checkAccess()
+
+        // Observe defaultCalendar changes and persist
+        $defaultCalendar
+            .sink { calendar in
+                if let calendar = calendar {
+                    UserDefaults.standard.set(calendar.calendarIdentifier, forKey: "defaultCalendarIdentifier")
+                    print("Saved default calendar: \(calendar.title)")
+                } else {
+                    UserDefaults.standard.removeObject(forKey: "defaultCalendarIdentifier")
+                    print("Cleared default calendar")
+                }
+            }
+            .store(in: &cancellables)
     }
+
+    private var cancellables = Set<AnyCancellable>()
 
     private func checkAccess() {
         let status = EKEventStore.authorizationStatus(for: .event)
@@ -143,13 +149,32 @@ class CalendarManager: ObservableObject {
         calendars = eventStore.calendars(for: .event)
 
         // Restore default calendar from UserDefaults
-        if let savedIdentifier = UserDefaults.standard.string(forKey: "defaultCalendarIdentifier"),
-           let savedCalendar = calendars.first(where: { $0.calendarIdentifier == savedIdentifier }) {
-            defaultCalendar = savedCalendar
+        if let savedIdentifier = UserDefaults.standard.string(forKey: "defaultCalendarIdentifier") {
+            print("Restoring default calendar with ID: \(savedIdentifier)")
+            if let savedCalendar = calendars.first(where: { $0.calendarIdentifier == savedIdentifier }) {
+                defaultCalendar = savedCalendar
+                print("Restored default calendar: \(savedCalendar.title)")
+            } else {
+                print("Could not find calendar with saved ID")
+            }
+        } else {
+            print("No saved default calendar")
         }
     }
 
+    private var lastLoadTime: Date?
+    private let minimumLoadInterval: TimeInterval = 0.5 // Minimum 0.5 seconds between loads
+
     func loadEvents() {
+        // Throttle loads to prevent excessive queries
+        if let lastLoad = lastLoadTime,
+           Date().timeIntervalSince(lastLoad) < minimumLoadInterval {
+            print("Skipping loadEvents - too soon since last load")
+            return
+        }
+
+        lastLoadTime = Date()
+
         let startDate = calendar.date(byAdding: .month, value: -1, to: Date()) ?? Date()
         let endDate = calendar.date(byAdding: .month, value: 2, to: Date()) ?? Date()
 
@@ -204,11 +229,27 @@ class CalendarManager: ObservableObject {
     }
 
     func findEvent(byProperties properties: EventProperties) -> EKEvent? {
-        // Search fresh from the store using a predicate
-        let startDate = properties.startDate.addingTimeInterval(-1) // 1 second tolerance
-        let endDate = properties.endDate.addingTimeInterval(1) // 1 second tolerance
+        // First try to find in cached events (much faster)
+        let cachedMatch = events.first { event in
+            event.title == properties.title &&
+            abs(event.startDate.timeIntervalSince(properties.startDate)) < 2 &&
+            abs(event.endDate.timeIntervalSince(properties.endDate)) < 2 &&
+            event.calendar.calendarIdentifier == properties.calendarIdentifier
+        }
 
-        let predicate = eventStore.predicateForEvents(withStart: startDate, end: endDate, calendars: nil)
+        if let cached = cachedMatch {
+            print("Found event in cache: \(cached.title ?? "Untitled")")
+            return cached
+        }
+
+        // If not in cache, query the store (more expensive)
+        print("Event not in cache, querying store...")
+        let startOfDay = calendar.startOfDay(for: properties.startDate)
+        guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else {
+            return nil
+        }
+
+        let predicate = eventStore.predicateForEvents(withStart: startOfDay, end: endOfDay, calendars: nil)
         let matchingEvents = eventStore.events(matching: predicate)
 
         return matchingEvents.first { event in
@@ -249,8 +290,8 @@ class CalendarManager: ObservableObject {
             throw error
         }
 
-        // Reload events to get fresh data
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+        // Reload events to get fresh data (with throttling)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             self?.loadEvents()
         }
     }
@@ -285,8 +326,38 @@ class CalendarManager: ObservableObject {
             throw error
         }
 
-        // Reload events to get fresh data
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+        // Reload events to get fresh data (with throttling)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.loadEvents()
+        }
+    }
+
+    func deleteEvent(withIdentifier identifier: String) throws {
+        guard let storeEvent = eventStore.event(withIdentifier: identifier) else {
+            throw NSError(domain: "CalendarManager", code: -3, userInfo: [NSLocalizedDescriptionKey: "Event not found in store"])
+        }
+
+        print("Deleting event: '\(storeEvent.title ?? "Untitled")'")
+        try eventStore.remove(storeEvent, span: .thisEvent, commit: true)
+        print("Successfully deleted event")
+
+        // Reload events
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.loadEvents()
+        }
+    }
+
+    func deleteEvent(byProperties properties: EventProperties) throws {
+        guard let event = findEvent(byProperties: properties) else {
+            throw NSError(domain: "CalendarManager", code: -4, userInfo: [NSLocalizedDescriptionKey: "Event not found"])
+        }
+
+        print("Deleting event by properties: '\(event.title ?? "Untitled")'")
+        try eventStore.remove(event, span: .thisEvent, commit: true)
+        print("Successfully deleted event")
+
+        // Reload events
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             self?.loadEvents()
         }
     }

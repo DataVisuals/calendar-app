@@ -18,6 +18,7 @@ struct NewEventSheet: View {
     @State private var isAllDay = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var showDeleteConfirmation = false
 
     private let parser = NaturalLanguageParser()
 
@@ -39,6 +40,15 @@ struct NewEventSheet: View {
                     .font(.system(size: 22 * calendarManager.fontSize.scale, weight: .semibold))
 
                 Spacer()
+
+                if isEditMode {
+                    Button("Delete") {
+                        deleteEvent()
+                    }
+                    .font(.system(size: 15 * calendarManager.fontSize.scale))
+                    .foregroundColor(.red)
+                    .buttonStyle(.bordered)
+                }
 
                 Button("Cancel") {
                     dismiss()
@@ -163,6 +173,14 @@ struct NewEventSheet: View {
         } message: {
             Text(errorMessage)
         }
+        .alert("Delete Event", isPresented: $showDeleteConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                performDelete()
+            }
+        } message: {
+            Text("Are you sure you want to delete this event? This action cannot be undone.")
+        }
         .onAppear {
             // Set default calendar first
             if selectedCalendar == nil {
@@ -246,6 +264,24 @@ struct NewEventSheet: View {
                     calendar: selectedCalendar,
                     notes: notes.isEmpty ? nil : notes
                 )
+            }
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
+
+    private func deleteEvent() {
+        showDeleteConfirmation = true
+    }
+
+    private func performDelete() {
+        do {
+            if let eventId = eventIdToEdit {
+                try calendarManager.deleteEvent(withIdentifier: eventId)
+            } else if let properties = eventPropertiesToEdit {
+                try calendarManager.deleteEvent(byProperties: properties)
             }
             dismiss()
         } catch {
