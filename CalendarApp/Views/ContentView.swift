@@ -35,6 +35,7 @@ struct ContentView: View {
     @State private var selectedView: CalendarViewType = .month
     @State private var currentDate = Date()
     @State private var showingNewEvent = false
+    @State private var newEventDate: Date?
     @State private var showingSearch = false
     @State private var searchText = ""
     @State private var highlightedEventIDs: Set<String> = []
@@ -63,7 +64,12 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showingNewEvent) {
-            NewEventSheet()
+            NewEventSheet(initialDate: newEventDate)
+        }
+        .onChange(of: showingNewEvent) { showing in
+            if !showing {
+                newEventDate = nil
+            }
         }
         .onChange(of: currentDate) { _ in
             calendarManager.loadEvents()
@@ -199,7 +205,7 @@ struct ContentView: View {
             .buttonStyle(.borderless)
 
             Text(headerTitle)
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(size: 24, weight: .semibold))
                 .frame(minWidth: 200)
         }
     }
@@ -268,7 +274,15 @@ struct ContentView: View {
         ZStack {
             switch selectedView {
             case .month:
-                MonthView(currentDate: $currentDate, highlightedEventIDs: highlightedEventIDs, weatherForecasts: weatherManager.dailyForecasts)
+                MonthView(
+                    currentDate: $currentDate,
+                    highlightedEventIDs: highlightedEventIDs,
+                    weatherForecasts: weatherManager.dailyForecasts,
+                    onDateDoubleClick: { date in
+                        newEventDate = date
+                        showingNewEvent = true
+                    }
+                )
             case .week:
                 WeekView(currentDate: $currentDate, highlightedEventIDs: highlightedEventIDs)
             case .workweek:

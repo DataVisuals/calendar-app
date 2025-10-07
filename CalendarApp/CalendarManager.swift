@@ -179,6 +179,16 @@ class CalendarManager: ObservableObject {
         try eventStore.save(event, span: .thisEvent)
         loadEvents()
     }
+
+    func moveEvent(_ event: EKEvent, to newDate: Date) throws {
+        let duration = event.endDate.timeIntervalSince(event.startDate)
+
+        event.startDate = newDate
+        event.endDate = newDate.addingTimeInterval(duration)
+
+        try eventStore.save(event, span: .thisEvent)
+        loadEvents()
+    }
 }
 
 import SwiftUI

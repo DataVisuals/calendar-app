@@ -6,6 +6,7 @@ struct MonthView: View {
     @Binding var currentDate: Date
     let highlightedEventIDs: Set<String>
     let weatherForecasts: [DailyWeatherInfo]
+    let onDateDoubleClick: (Date) -> Void
 
     private var calendar: Calendar {
         var cal = Calendar.current
@@ -38,8 +39,14 @@ struct MonthView: View {
                 // Calendar grid
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 0) {
                     ForEach(getDaysInMonth(), id: \.self) { date in
-                        DayCell(date: date, currentMonth: isInCurrentMonth(date), highlightedEventIDs: highlightedEventIDs, weatherForecasts: weatherForecasts)
-                            .frame(height: cellHeight)
+                        DayCell(
+                            date: date,
+                            currentMonth: isInCurrentMonth(date),
+                            highlightedEventIDs: highlightedEventIDs,
+                            weatherForecasts: weatherForecasts,
+                            onDoubleClick: onDateDoubleClick
+                        )
+                        .frame(height: cellHeight)
                     }
                 }
             }
@@ -76,6 +83,9 @@ struct DayCell: View {
     let currentMonth: Bool
     let highlightedEventIDs: Set<String>
     let weatherForecasts: [DailyWeatherInfo]
+    let onDoubleClick: (Date) -> Void
+
+    @State private var draggedEvent: EKEvent?
 
     private var calendar: Calendar {
         var cal = Calendar.current
@@ -153,6 +163,34 @@ struct DayCell: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 : nil
         )
+        .onTapGesture(count: 2) {
+            onDoubleClick(date)
+        }
+        .onDrop(of: [.text], isTargeted: nil) { providers in
+            guard let provider = providers.first else { return false }
+
+            provider.loadItem(forTypeIdentifier: "public.text", options: nil) { data, error in
+                guard let data = data as? Data,
+                      let eventId = String(data: data, encoding: .utf8),
+                      let event = calendarManager.events.first(where: { $0.eventIdentifier == eventId }) else {
+                    return
+                }
+
+                DispatchQueue.main.async {
+                    let targetDate = calendar.startOfDay(for: date)
+                    let originalStartOfDay = calendar.startOfDay(for: event.startDate)
+                    let timeOffset = event.startDate.timeIntervalSince(originalStartOfDay)
+                    let newStartDate = targetDate.addingTimeInterval(timeOffset)
+
+                    do {
+                        try calendarManager.moveEvent(event, to: newStartDate)
+                    } catch {
+                        print("Error moving event: \(error)")
+                    }
+                }
+            }
+            return true
+        }
     }
 
     private var isToday: Bool {
@@ -211,5 +249,11 @@ struct EventBadge: View {
             RoundedRectangle(cornerRadius: 4)
                 .stroke(isHighlighted ? calendarManager.color(for: event.calendar).opacity(0.8) : Color.clear, lineWidth: 2)
         )
+        .onDrag {
+            if let eventId = event.eventIdentifier {
+                return NSItemProvider(object: eventId as NSString)
+            }
+            return NSItemProvider()
+        }
     }
 }

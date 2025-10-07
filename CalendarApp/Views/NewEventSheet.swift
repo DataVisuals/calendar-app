@@ -5,6 +5,8 @@ struct NewEventSheet: View {
     @EnvironmentObject var calendarManager: CalendarManager
     @Environment(\.dismiss) var dismiss
 
+    let initialDate: Date?
+
     @State private var quickInput = ""
     @State private var title = ""
     @State private var startDate = Date()
@@ -16,6 +18,10 @@ struct NewEventSheet: View {
     @State private var errorMessage = ""
 
     private let parser = NaturalLanguageParser()
+
+    init(initialDate: Date? = nil) {
+        self.initialDate = initialDate
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -150,6 +156,10 @@ struct NewEventSheet: View {
         .onAppear {
             if selectedCalendar == nil {
                 selectedCalendar = calendarManager.calendars.first
+            }
+            if let initialDate = initialDate {
+                startDate = initialDate
+                endDate = initialDate.addingTimeInterval(3600)
             }
         }
     }
