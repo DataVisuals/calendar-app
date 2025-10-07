@@ -8,6 +8,26 @@ struct EventIconHelper {
         let notes = (event.notes ?? "").lowercased()
         let combined = "\(title) \(location) \(notes)"
 
+        // Halloween
+        if combined.contains("halloween") {
+            return "theatermasks.fill"
+        }
+
+        // Diwali
+        if combined.contains("diwali") {
+            return "candle.fill"
+        }
+
+        // Guy Fawkes / Bonfire Night
+        if combined.contains("guy fawkes") || combined.contains("bonfire night") || combined.contains("bonfire") {
+            return "flame.fill"
+        }
+
+        // Guitar / Music Practice
+        if combined.contains("guitar") {
+            return "guitars.fill"
+        }
+
         // Birthday
         if combined.contains("birthday") || combined.contains("bday") || combined.contains("b-day") {
             return "gift.fill"
