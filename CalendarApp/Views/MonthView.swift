@@ -56,9 +56,9 @@ struct MonthView: View {
                     }
                 }
             }
-            .onScrollWheel { event in
-                handleScrollWheel(event)
-            }
+        }
+        .onScrollWheel { event in
+            handleScrollWheel(event)
         }
     }
 
