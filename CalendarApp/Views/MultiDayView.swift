@@ -61,7 +61,7 @@ struct MultiDayView: View {
                 .frame(width: effectiveWidth, height: 70)
 
                 // Scrollable content
-                ScrollView {
+                ScrollView(.vertical, showsIndicators: false) {
                     HStack(alignment: .top, spacing: 0) {
                         // Timezone columns
                         ForEach(0..<calendarManager.alternateTimezones.count, id: \.self) { index in
@@ -99,10 +99,12 @@ struct MultiDayView: View {
                             }
                         }
                     }
-                    .frame(width: effectiveWidth)
+                    .frame(width: effectiveWidth, alignment: .leading)
                 }
-                .scrollIndicators(.hidden)
+                .frame(width: effectiveWidth)
             }
+            .frame(width: effectiveWidth, alignment: .topLeading)
+            .clipped()
             .onScrollWheel { event in
                 handleScrollWheel(event)
             }

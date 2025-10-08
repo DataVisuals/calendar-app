@@ -74,7 +74,7 @@ struct TodayView: View {
                 .border(Color(NSColor.separatorColor), width: 0.5)
 
                 // Scrollable content
-                ScrollView {
+                ScrollView(.vertical, showsIndicators: false) {
                     HStack(alignment: .top, spacing: 0) {
                         // Alternate timezone columns
                         ForEach(0..<calendarManager.alternateTimezones.count, id: \.self) { index in
@@ -108,10 +108,12 @@ struct TodayView: View {
                         TodayColumnContent(date: currentDate, hourHeight: hourHeight, highlightedEventIDs: highlightedEventIDs)
                             .frame(width: dateHeaderWidth)
                     }
-                    .frame(width: effectiveWidth)
+                    .frame(width: effectiveWidth, alignment: .leading)
                 }
-                .scrollIndicators(.hidden)
+                .frame(width: effectiveWidth)
             }
+            .frame(width: effectiveWidth, alignment: .topLeading)
+            .clipped()
             .onAppear {
                 if containerWidth == 0 {
                     containerWidth = geometry.size.width
