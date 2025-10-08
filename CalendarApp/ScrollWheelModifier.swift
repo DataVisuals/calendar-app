@@ -4,44 +4,64 @@ import AppKit
 // Custom view modifier to handle scroll wheel events
 struct ScrollWheelModifier: ViewModifier {
     let onScroll: (NSEvent) -> Void
-    
+
     func body(content: Content) -> some View {
-        content.overlay(
-            ScrollWheelView(onScroll: onScroll)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .allowsHitTesting(false)
-        )
+        ScrollWheelHostingView(onScroll: onScroll) {
+            content
+        }
     }
 }
 
-// NSView wrapper to capture scroll wheel events
-struct ScrollWheelView: NSViewRepresentable {
+// NSViewRepresentable that wraps content and captures scroll events
+struct ScrollWheelHostingView<Content: View>: NSViewRepresentable {
     let onScroll: (NSEvent) -> Void
-    
-    func makeNSView(context: Context) -> ScrollWheelNSView {
-        ScrollWheelNSView(onScroll: onScroll)
+    let content: Content
+
+    init(onScroll: @escaping (NSEvent) -> Void, @ViewBuilder content: () -> Content) {
+        self.onScroll = onScroll
+        self.content = content()
     }
-    
-    func updateNSView(_ nsView: ScrollWheelNSView, context: Context) {
+
+    func makeNSView(context: Context) -> ScrollWheelContainerView {
+        let view = ScrollWheelContainerView(onScroll: onScroll)
+        let hostingView = NSHostingView(rootView: content)
+        hostingView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(hostingView)
+
+        NSLayoutConstraint.activate([
+            hostingView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            hostingView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            hostingView.topAnchor.constraint(equalTo: view.topAnchor),
+            hostingView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+
+        return view
+    }
+
+    func updateNSView(_ nsView: ScrollWheelContainerView, context: Context) {
         nsView.onScroll = onScroll
+        // Update the hosting view's root view
+        if let hostingView = nsView.subviews.first as? NSHostingView<Content> {
+            hostingView.rootView = content
+        }
     }
 }
 
-class ScrollWheelNSView: NSView {
+class ScrollWheelContainerView: NSView {
     var onScroll: (NSEvent) -> Void
-    
+
     init(onScroll: @escaping (NSEvent) -> Void) {
         self.onScroll = onScroll
         super.init(frame: .zero)
     }
-    
+
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
+
     override func scrollWheel(with event: NSEvent) {
         onScroll(event)
-        super.scrollWheel(with: event)
+        // Don't call super to prevent default scroll behavior
     }
 }
 

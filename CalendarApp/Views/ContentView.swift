@@ -4,7 +4,7 @@ import EventKit
 enum CalendarViewType: String, CaseIterable {
     case month = "Month"
     case week = "Week"
-    case workweek = "Work Week"
+    case workweek = "5-Day"
     case threeDay = "3 Days"
     case agenda = "Agenda"
 
@@ -22,7 +22,7 @@ enum CalendarViewType: String, CaseIterable {
         switch self {
         case .month: return "Month (⌘1)"
         case .week: return "Week (⌘2)"
-        case .workweek: return "Work Week (⌘3)"
+        case .workweek: return "5-Day (⌘3)"
         case .threeDay: return "3 Days (⌘4)"
         case .agenda: return "Agenda (⌘5)"
         }
@@ -576,6 +576,7 @@ struct ViewSelectorButton: View {
         Button(action: action) {
             Text(viewType.rawValue)
                 .font(.system(size: 12, weight: isSelected ? .medium : .regular))
+                .fixedSize()
                 .padding(.horizontal, 12)
                 .padding(.vertical, 5)
                 .frame(maxWidth: .infinity)
