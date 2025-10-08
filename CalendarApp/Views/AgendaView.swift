@@ -22,6 +22,27 @@ struct AgendaView: View {
             }
             .padding()
         }
+        .onScrollWheel { event in
+            handleScrollWheel(event)
+        }
+    }
+
+    private func handleScrollWheel(_ event: NSEvent) {
+        let threshold: CGFloat = 10.0
+
+        if abs(event.scrollingDeltaY) > threshold {
+            if event.scrollingDeltaY > 0 {
+                // Scroll up = go to previous month
+                if let newDate = calendar.date(byAdding: .month, value: -1, to: currentDate) {
+                    currentDate = newDate
+                }
+            } else {
+                // Scroll down = go to next month
+                if let newDate = calendar.date(byAdding: .month, value: 1, to: currentDate) {
+                    currentDate = newDate
+                }
+            }
+        }
     }
 
     private var upcomingDays: [Date] {

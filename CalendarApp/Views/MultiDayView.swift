@@ -55,6 +55,27 @@ struct MultiDayView: View {
                     }
                 }
             }
+            .onScrollWheel { event in
+                handleScrollWheel(event)
+            }
+        }
+    }
+
+    private func handleScrollWheel(_ event: NSEvent) {
+        let threshold: CGFloat = 10.0
+
+        if abs(event.scrollingDeltaY) > threshold {
+            if event.scrollingDeltaY > 0 {
+                // Scroll up = go to previous period
+                if let newDate = calendar.date(byAdding: .day, value: -numberOfDays, to: currentDate) {
+                    currentDate = newDate
+                }
+            } else {
+                // Scroll down = go to next period
+                if let newDate = calendar.date(byAdding: .day, value: numberOfDays, to: currentDate) {
+                    currentDate = newDate
+                }
+            }
         }
     }
 

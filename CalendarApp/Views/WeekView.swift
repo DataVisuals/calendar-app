@@ -47,6 +47,27 @@ struct WeekView: View {
                     }
                 }
             }
+            .onScrollWheel { event in
+                handleScrollWheel(event)
+            }
+        }
+    }
+
+    private func handleScrollWheel(_ event: NSEvent) {
+        let threshold: CGFloat = 10.0
+
+        if abs(event.scrollingDeltaY) > threshold {
+            if event.scrollingDeltaY > 0 {
+                // Scroll up = go to previous week
+                if let newDate = calendar.date(byAdding: .weekOfYear, value: -1, to: currentDate) {
+                    currentDate = newDate
+                }
+            } else {
+                // Scroll down = go to next week
+                if let newDate = calendar.date(byAdding: .weekOfYear, value: 1, to: currentDate) {
+                    currentDate = newDate
+                }
+            }
         }
     }
 
