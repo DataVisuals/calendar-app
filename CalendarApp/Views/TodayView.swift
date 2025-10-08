@@ -19,6 +19,7 @@ struct TodayView: View {
             let timeColumnWidth: CGFloat = 60
             let totalTimeColumns = 1 + calendarManager.alternateTimezones.count
             let totalTimeWidth = CGFloat(totalTimeColumns) * timeColumnWidth
+            let dateHeaderWidth = geometry.size.width - totalTimeWidth
 
             VStack(spacing: 0) {
                 // News feed
@@ -26,40 +27,44 @@ struct TodayView: View {
                     .environmentObject(calendarManager)
 
                 // Sticky header
-                HStack(spacing: 0) {
-                    // Empty spacer for timezone columns
-                    ForEach(0..<calendarManager.alternateTimezones.count, id: \.self) { index in
-                        let tzIdentifier = calendarManager.alternateTimezones[index]
-                        if let tz = TimeZone(identifier: tzIdentifier) {
-                            Text(tz.abbreviation() ?? "")
-                                .font(.system(size: 10 * calendarManager.fontSize.scale, weight: .medium))
-                                .foregroundColor(.secondary)
-                                .frame(width: timeColumnWidth, height: 70)
-                                .background(Color(NSColor.controlBackgroundColor).opacity(0.8))
+                ZStack(alignment: .topLeading) {
+                    Color(NSColor.controlBackgroundColor)
+                        .frame(height: 70)
+
+                    HStack(spacing: 0) {
+                        // Empty spacer for timezone columns
+                        ForEach(0..<calendarManager.alternateTimezones.count, id: \.self) { index in
+                            let tzIdentifier = calendarManager.alternateTimezones[index]
+                            if let tz = TimeZone(identifier: tzIdentifier) {
+                                Text(tz.abbreviation() ?? "")
+                                    .font(.system(size: 10 * calendarManager.fontSize.scale, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                    .frame(width: timeColumnWidth, height: 70)
+                                    .background(Color(NSColor.controlBackgroundColor).opacity(0.8))
+                            }
                         }
+
+                        // Empty spacer for local time column
+                        Color.clear
+                            .frame(width: timeColumnWidth, height: 70)
+
+                        // Date header
+                        VStack(spacing: 4) {
+                            Text(dayOfWeek)
+                                .font(.system(size: 13 * calendarManager.fontSize.scale, weight: .medium))
+                                .foregroundColor(.secondary)
+
+                            Text("\(calendar.component(.day, from: currentDate))")
+                                .font(.system(size: 20 * calendarManager.fontSize.scale, weight: .bold))
+                                .foregroundColor(.white)
+                                .frame(width: 36, height: 36)
+                                .background(
+                                    Circle()
+                                        .fill(Color.blue)
+                                )
+                        }
+                        .frame(width: dateHeaderWidth, height: 70)
                     }
-
-                    // Empty spacer for local time column
-                    Color.clear
-                        .frame(width: timeColumnWidth, height: 70)
-
-                    // Date header
-                    VStack(spacing: 4) {
-                        Text(dayOfWeek)
-                            .font(.system(size: 13 * calendarManager.fontSize.scale, weight: .medium))
-                            .foregroundColor(.secondary)
-
-                        Text("\(calendar.component(.day, from: currentDate))")
-                            .font(.system(size: 20 * calendarManager.fontSize.scale, weight: .bold))
-                            .foregroundColor(.white)
-                            .frame(width: 36, height: 36)
-                            .background(
-                                Circle()
-                                    .fill(Color.blue)
-                            )
-                    }
-                    .frame(width: geometry.size.width - totalTimeWidth, height: 70)
-                    .background(Color(NSColor.controlBackgroundColor))
                 }
                 .frame(width: geometry.size.width, height: 70)
                 .border(Color(NSColor.separatorColor), width: 0.5)

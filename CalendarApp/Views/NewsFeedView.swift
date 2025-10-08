@@ -6,63 +6,57 @@ struct NewsFeedView: View {
     @EnvironmentObject var calendarManager: CalendarManager
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Image(systemName: "newspaper")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.secondary)
 
                 Text("TODAY'S HEADLINES")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundColor(.secondary)
 
                 Spacer()
 
                 if newsManager.isLoading {
                     ProgressView()
-                        .scaleEffect(0.7)
+                        .scaleEffect(0.6)
                 }
             }
             .padding(.horizontal, 12)
-            .padding(.top, 8)
+            .padding(.top, 6)
 
             if newsManager.headlines.isEmpty && !newsManager.isLoading {
                 Text("No headlines available")
-                    .font(.system(size: 12))
+                    .font(.system(size: 11))
                     .foregroundColor(.secondary)
                     .padding(.horizontal, 12)
-                    .padding(.bottom, 8)
+                    .padding(.bottom, 4)
             } else {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 3) {
                     ForEach(newsManager.headlines) { article in
                         Button(action: {
                             NSWorkspace.shared.open(article.url)
                         }) {
-                            HStack(spacing: 8) {
+                            HStack(spacing: 6) {
                                 Text("•")
-                                    .font(.system(size: 10))
+                                    .font(.system(size: 9))
                                     .foregroundColor(.secondary)
 
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(article.title)
-                                        .font(.system(size: 12 * calendarManager.fontSize.scale))
-                                        .foregroundColor(.primary)
-                                        .lineLimit(1)
-                                        .truncationMode(.tail)
-
-                                    Text(article.source)
-                                        .font(.system(size: 10 * calendarManager.fontSize.scale))
-                                        .foregroundColor(.secondary)
-                                }
+                                Text("\(article.title) [\(article.source)]")
+                                    .font(.system(size: 11 * calendarManager.fontSize.scale))
+                                    .foregroundColor(.primary)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
 
                                 Spacer()
 
                                 Image(systemName: "arrow.up.right.square")
-                                    .font(.system(size: 10))
+                                    .font(.system(size: 9))
                                     .foregroundColor(.secondary)
                             }
                             .padding(.horizontal, 12)
-                            .padding(.vertical, 4)
+                            .padding(.vertical, 2)
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
@@ -75,7 +69,7 @@ struct NewsFeedView: View {
                         }
                     }
                 }
-                .padding(.bottom, 8)
+                .padding(.bottom, 4)
             }
 
             Divider()
