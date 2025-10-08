@@ -90,7 +90,7 @@ struct ContentView: View {
             }
         }
         .applyViewShortcuts(selectedView: $selectedView)
-        .applySearchShortcut(showingSearch: $showingSearch, searchFocused: $searchFocused)
+        .applySearchShortcut(showingSearch: $showingSearch, searchFocused: $searchFocused, quickAddFocused: $quickAddFocused)
     }
 
     private var searchOverlay: some View {
@@ -527,9 +527,11 @@ extension View {
         self.modifier(ViewShortcutsModifier(selectedView: selectedView))
     }
 
-    func applySearchShortcut(showingSearch: Binding<Bool>, searchFocused: FocusState<Bool>.Binding) -> some View {
+    func applySearchShortcut(showingSearch: Binding<Bool>, searchFocused: FocusState<Bool>.Binding, quickAddFocused: FocusState<Bool>.Binding) -> some View {
         self.background(
             Button("") {
+                // Unfocus quick add field first to prevent "/" from being typed
+                quickAddFocused.wrappedValue = false
                 showingSearch.wrappedValue = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     searchFocused.wrappedValue = true
