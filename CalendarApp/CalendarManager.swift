@@ -248,7 +248,7 @@ class CalendarManager: ObservableObject {
     }
 
     func findEvent(byProperties properties: EventProperties) -> EKEvent? {
-        // First try to find in cached events (much faster)
+        // First try to find in cached events to get the identifier
         let cachedMatch = events.first { event in
             event.title == properties.title &&
             abs(event.startDate.timeIntervalSince(properties.startDate)) < 2 &&
@@ -256,12 +256,13 @@ class CalendarManager: ObservableObject {
             event.calendar.calendarIdentifier == properties.calendarIdentifier
         }
 
-        if let cached = cachedMatch {
-            print("Found event in cache: \(cached.title ?? "Untitled")")
-            return cached
+        // If we found it in cache and it has an identifier, refetch from store
+        if let cached = cachedMatch, let identifier = cached.eventIdentifier {
+            print("Found event in cache, refetching from store: \(cached.title ?? "Untitled")")
+            return eventStore.event(withIdentifier: identifier)
         }
 
-        // If not in cache, query the store (more expensive)
+        // If not in cache or no identifier, query the store directly
         print("Event not in cache, querying store...")
         let startOfDay = calendar.startOfDay(for: properties.startDate)
         guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else {
