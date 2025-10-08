@@ -25,6 +25,7 @@ struct TodayView: View {
                 // News feed
                 NewsFeedView()
                     .environmentObject(calendarManager)
+                    .frame(width: geometry.size.width)
 
                 // Sticky header
                 ZStack(alignment: .topLeading) {
@@ -102,9 +103,11 @@ struct TodayView: View {
 
                         // Today column (without header)
                         TodayColumnContent(date: currentDate, hourHeight: hourHeight, highlightedEventIDs: highlightedEventIDs)
-                            .frame(width: geometry.size.width - totalTimeWidth)
+                            .frame(width: dateHeaderWidth)
                     }
+                    .frame(width: geometry.size.width)
                 }
+                .scrollIndicators(.hidden)
             }
         }
     }
