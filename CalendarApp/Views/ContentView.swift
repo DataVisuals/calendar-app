@@ -6,6 +6,7 @@ enum CalendarViewType: String, CaseIterable {
     case week = "Week"
     case workweek = "5-Day"
     case threeDay = "3-Day"
+    case today = "Today"
     case agenda = "Agenda"
 
     var shortcut: KeyEquivalent {
@@ -14,6 +15,7 @@ enum CalendarViewType: String, CaseIterable {
         case .week: return "2"
         case .workweek: return "3"
         case .threeDay: return "4"
+        case .today: return "6"
         case .agenda: return "5"
         }
     }
@@ -24,6 +26,7 @@ enum CalendarViewType: String, CaseIterable {
         case .week: return "Week (⌘2)"
         case .workweek: return "5-Day (⌘3)"
         case .threeDay: return "3-Day (⌘4)"
+        case .today: return "Today (⌘6)"
         case .agenda: return "Agenda (⌘5)"
         }
     }
@@ -379,6 +382,8 @@ struct ContentView: View {
                 MultiDayView(currentDate: $currentDate, numberOfDays: 5, workweekOnly: true, highlightedEventIDs: highlightedEventIDs)
             case .threeDay:
                 MultiDayView(currentDate: $currentDate, numberOfDays: 3, highlightedEventIDs: highlightedEventIDs)
+            case .today:
+                TodayView(currentDate: $currentDate, highlightedEventIDs: highlightedEventIDs)
             case .agenda:
                 AgendaView(currentDate: $currentDate, highlightedEventIDs: highlightedEventIDs)
             }
@@ -407,6 +412,8 @@ struct ContentView: View {
                 }
             }
             formatter.dateFormat = "MMMM yyyy"
+        case .today:
+            formatter.dateFormat = "EEEE, MMMM d, yyyy"
         case .agenda:
             formatter.dateFormat = "MMMM yyyy"
         }
@@ -522,6 +529,8 @@ struct ContentView: View {
             currentDate = calendar.date(byAdding: .weekOfYear, value: -1, to: currentDate) ?? currentDate
         case .threeDay:
             currentDate = calendar.date(byAdding: .day, value: -3, to: currentDate) ?? currentDate
+        case .today:
+            currentDate = calendar.date(byAdding: .day, value: -1, to: currentDate) ?? currentDate
         case .agenda:
             currentDate = calendar.date(byAdding: .month, value: -1, to: currentDate) ?? currentDate
         }
@@ -535,6 +544,8 @@ struct ContentView: View {
             currentDate = calendar.date(byAdding: .weekOfYear, value: 1, to: currentDate) ?? currentDate
         case .threeDay:
             currentDate = calendar.date(byAdding: .day, value: 3, to: currentDate) ?? currentDate
+        case .today:
+            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? currentDate
         case .agenda:
             currentDate = calendar.date(byAdding: .month, value: 1, to: currentDate) ?? currentDate
         }
@@ -642,6 +653,9 @@ struct ViewShortcutsModifier: ViewModifier {
                         .hidden()
                     Button("") { selectedView = .agenda }
                         .keyboardShortcut("5", modifiers: .command)
+                        .hidden()
+                    Button("") { selectedView = .today }
+                        .keyboardShortcut("6", modifiers: .command)
                         .hidden()
                 }
             )

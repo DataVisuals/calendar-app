@@ -1,7 +1,7 @@
 import SwiftUI
 import EventKit
 
-struct WeekView: View {
+struct TodayView: View {
     @EnvironmentObject var calendarManager: CalendarManager
     @Environment(\.colorScheme) var colorScheme
     @Binding var currentDate: Date
@@ -37,55 +37,13 @@ struct WeekView: View {
                 }
                 .frame(width: 60)
 
-                // Days
+                // Today column
                 ScrollView {
-                    HStack(spacing: 0) {
-                        ForEach(weekDays, id: \.self) { date in
-                            DayColumn(date: date, hourHeight: hourHeight, highlightedEventIDs: highlightedEventIDs)
-                                .frame(width: (geometry.size.width - 60) / 7)
-                        }
-                    }
-                }
-            }
-            .onScrollWheel { event in
-                handleScrollWheel(event)
-            }
-        }
-    }
-
-    private func handleScrollWheel(_ event: NSEvent) {
-        let threshold: CGFloat = 10.0
-
-        if abs(event.scrollingDeltaY) > threshold {
-            if event.scrollingDeltaY > 0 {
-                // Scroll up = go to previous week
-                if let newDate = calendar.date(byAdding: .weekOfYear, value: -1, to: currentDate) {
-                    currentDate = newDate
-                }
-            } else {
-                // Scroll down = go to next week
-                if let newDate = calendar.date(byAdding: .weekOfYear, value: 1, to: currentDate) {
-                    currentDate = newDate
+                    TodayColumn(date: currentDate, hourHeight: hourHeight, highlightedEventIDs: highlightedEventIDs)
+                        .frame(width: geometry.size.width - 60)
                 }
             }
         }
-    }
-
-    private var weekDays: [Date] {
-        guard let weekInterval = calendar.dateInterval(of: .weekOfYear, for: currentDate) else {
-            return []
-        }
-
-        var days: [Date] = []
-        var date = weekInterval.start
-
-        for _ in 0..<7 {
-            days.append(date)
-            guard let nextDate = calendar.date(byAdding: .day, value: 1, to: date) else { break }
-            date = nextDate
-        }
-
-        return days
     }
 
     private func formatHour(_ hour: Int) -> String {
@@ -96,7 +54,7 @@ struct WeekView: View {
     }
 }
 
-struct DayColumn: View {
+struct TodayColumn: View {
     @EnvironmentObject var calendarManager: CalendarManager
     @Environment(\.colorScheme) var colorScheme
     let date: Date
@@ -118,19 +76,19 @@ struct DayColumn: View {
                     .foregroundColor(.secondary)
 
                 Text("\(calendar.component(.day, from: date))")
-                    .font(.system(size: 20 * calendarManager.fontSize.scale, weight: isToday ? .bold : .regular))
-                    .foregroundColor(isToday ? .white : .primary)
+                    .font(.system(size: 20 * calendarManager.fontSize.scale, weight: .bold))
+                    .foregroundColor(.white)
                     .frame(width: 36, height: 36)
                     .background(
                         Circle()
-                            .fill(isToday ? Color.blue : Color.clear)
+                            .fill(Color.blue)
                     )
             }
             .frame(height: 70)
             .frame(maxWidth: .infinity)
             .background(Color(NSColor.controlBackgroundColor))
 
-            // Hour grid with events
+            // Hour grid with events and gaps
             ZStack(alignment: .topLeading) {
                 // Hour lines
                 VStack(spacing: 0) {
@@ -146,31 +104,17 @@ struct DayColumn: View {
 
                 // Events
                 ForEach(Array(dayEvents.enumerated()), id: \.offset) { _, event in
-                    EventBlock(event: event, hourHeight: hourHeight, date: date, isHighlighted: event.eventIdentifier.map { highlightedEventIDs.contains($0) } ?? false)
+                    TodayEventBlock(event: event, hourHeight: hourHeight, date: date, isHighlighted: event.eventIdentifier.map { highlightedEventIDs.contains($0) } ?? false)
+                }
+
+                // Gaps
+                ForEach(Array(eventGaps.enumerated()), id: \.offset) { _, gap in
+                    GapIndicator(gap: gap, hourHeight: hourHeight)
                 }
             }
         }
-        .background(
-            isWeekend ? Color.accentColor.opacity(0.06) : Color.clear
-        )
+        .background(Color.clear)
         .border(Color(NSColor.separatorColor), width: 0.5)
-        .overlay(
-            isWeekend ?
-                Rectangle()
-                    .fill(Color.accentColor.opacity(0.15))
-                    .frame(width: 3)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                : nil
-        )
-    }
-
-    private var isToday: Bool {
-        calendar.isDateInToday(date)
-    }
-
-    private var isWeekend: Bool {
-        let weekday = calendar.component(.weekday, from: date)
-        return weekday == 1 || weekday == 7 // Sunday or Saturday
     }
 
     private var dayOfWeek: String {
@@ -180,11 +124,104 @@ struct DayColumn: View {
     }
 
     private var dayEvents: [EKEvent] {
-        calendarManager.events(for: date).filter { !$0.isAllDay }
+        calendarManager.events(for: date).filter { !$0.isAllDay }.sorted { $0.startDate < $1.startDate }
+    }
+
+    private var eventGaps: [EventGap] {
+        var gaps: [EventGap] = []
+        let events = dayEvents
+
+        guard !events.isEmpty else { return gaps }
+
+        let startOfDay = calendar.startOfDay(for: date)
+
+        for i in 0..<events.count - 1 {
+            let currentEvent = events[i]
+            let nextEvent = events[i + 1]
+
+            // Check if there's a gap between current event end and next event start
+            if currentEvent.endDate < nextEvent.startDate {
+                let gapStart = currentEvent.endDate
+                let gapEnd = nextEvent.startDate
+                let duration = gapEnd.timeIntervalSince(gapStart)
+
+                // Only show gaps of at least 15 minutes
+                if duration >= 900 {
+                    let secondsFromStart = gapStart.timeIntervalSince(startOfDay)
+                    let hours = secondsFromStart / 3600
+                    let offsetY = CGFloat(hours) * hourHeight
+
+                    let gapHours = duration / 3600
+                    let height = CGFloat(gapHours) * hourHeight
+
+                    gaps.append(EventGap(offsetY: offsetY, height: height, duration: duration))
+                }
+            }
+        }
+
+        return gaps
     }
 }
 
-struct EventBlock: View {
+struct EventGap: Identifiable {
+    let id = UUID()
+    let offsetY: CGFloat
+    let height: CGFloat
+    let duration: TimeInterval
+}
+
+struct GapIndicator: View {
+    @EnvironmentObject var calendarManager: CalendarManager
+    let gap: EventGap
+    let hourHeight: CGFloat
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Spacer()
+
+            HStack(spacing: 6) {
+                Rectangle()
+                    .fill(Color.secondary.opacity(0.3))
+                    .frame(height: 1)
+
+                Text(formatDuration(gap.duration))
+                    .font(.system(size: 11 * calendarManager.fontSize.scale))
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color(NSColor.controlBackgroundColor).opacity(0.9))
+                    )
+
+                Rectangle()
+                    .fill(Color.secondary.opacity(0.3))
+                    .frame(height: 1)
+            }
+            .padding(.horizontal, 8)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: gap.height)
+        .offset(y: gap.offsetY)
+    }
+
+    private func formatDuration(_ duration: TimeInterval) -> String {
+        let hours = Int(duration) / 3600
+        let minutes = (Int(duration) % 3600) / 60
+
+        if hours > 0 && minutes > 0 {
+            return "\(hours)h \(minutes)m free"
+        } else if hours > 0 {
+            return "\(hours)h free"
+        } else {
+            return "\(minutes)m free"
+        }
+    }
+}
+
+struct TodayEventBlock: View {
     @EnvironmentObject var calendarManager: CalendarManager
     @Environment(\.colorScheme) var colorScheme
     let event: EKEvent
@@ -231,7 +268,7 @@ struct EventBlock: View {
         )
         .offset(y: offsetY + dragOffset)
         .frame(height: height)
-        .padding(.horizontal, 3)
+        .padding(.horizontal, 8)
         .opacity(isDragging ? 0.7 : 1.0)
         .gesture(
             DragGesture()
@@ -279,7 +316,8 @@ struct EventBlock: View {
     private var timeString: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "h:mm a"
-        return formatter.string(from: event.startDate)
+        let endTime = formatter.string(from: event.endDate)
+        return "\(formatter.string(from: event.startDate)) – \(endTime)"
     }
 
     private var previewTimeString: String {
@@ -287,8 +325,11 @@ struct EventBlock: View {
         formatter.dateFormat = "h:mm a"
 
         let minutesOffset = (dragOffset / hourHeight) * 60
-        if let newStartDate = calendar.date(byAdding: .minute, value: Int(minutesOffset), to: event.startDate) {
-            return formatter.string(from: newStartDate)
+        if let newStartDate = calendar.date(byAdding: .minute, value: Int(minutesOffset), to: event.startDate),
+           let duration = calendar.dateComponents([.minute], from: event.startDate, to: event.endDate).minute,
+           let newEndDate = calendar.date(byAdding: .minute, value: duration, to: newStartDate) {
+            let endTime = formatter.string(from: newEndDate)
+            return "\(formatter.string(from: newStartDate)) – \(endTime)"
         }
         return timeString
     }
