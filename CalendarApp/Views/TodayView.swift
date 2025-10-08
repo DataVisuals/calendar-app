@@ -54,54 +54,43 @@ struct TodayView: View {
                                     .fill(Color.blue)
                             )
                     }
-                    .frame(height: 70)
-                    .frame(maxWidth: .infinity)
+                    .frame(width: geometry.size.width - totalTimeWidth, height: 70)
                     .background(Color(NSColor.controlBackgroundColor))
                 }
                 .border(Color(NSColor.separatorColor), width: 0.5)
 
                 // Scrollable content
-                HStack(spacing: 0) {
-                    // Alternate timezone columns
-                    ForEach(0..<calendarManager.alternateTimezones.count, id: \.self) { index in
-                        let tzIdentifier = calendarManager.alternateTimezones[index]
-                        if let tz = TimeZone(identifier: tzIdentifier) {
-                            VStack(spacing: 0) {
-                                ScrollView {
-                                    VStack(spacing: 0) {
-                                        ForEach(0..<24, id: \.self) { hour in
-                                            Text(formatHourForTimezone(hour, timezone: tz))
-                                                .font(.system(size: 12 * calendarManager.fontSize.scale))
-                                                .foregroundColor(.secondary.opacity(0.7))
-                                                .frame(width: timeColumnWidth, height: hourHeight, alignment: .top)
-                                        }
+                ScrollView {
+                    HStack(alignment: .top, spacing: 0) {
+                        // Alternate timezone columns
+                        ForEach(0..<calendarManager.alternateTimezones.count, id: \.self) { index in
+                            let tzIdentifier = calendarManager.alternateTimezones[index]
+                            if let tz = TimeZone(identifier: tzIdentifier) {
+                                VStack(spacing: 0) {
+                                    ForEach(0..<24, id: \.self) { hour in
+                                        Text(formatHourForTimezone(hour, timezone: tz))
+                                            .font(.system(size: 12 * calendarManager.fontSize.scale))
+                                            .foregroundColor(.secondary.opacity(0.7))
+                                            .frame(width: timeColumnWidth, height: hourHeight, alignment: .top)
                                     }
                                 }
-                                .scrollDisabled(true)
-                            }
-                            .frame(width: timeColumnWidth)
-                            .background(Color(NSColor.controlBackgroundColor).opacity(0.05))
-                        }
-                    }
-
-                    // Local time labels
-                    VStack(spacing: 0) {
-                        ScrollView {
-                            VStack(spacing: 0) {
-                                ForEach(0..<24, id: \.self) { hour in
-                                    Text(formatHour(hour))
-                                        .font(.system(size: 14 * calendarManager.fontSize.scale))
-                                        .foregroundColor(.secondary)
-                                        .frame(width: timeColumnWidth, height: hourHeight, alignment: .top)
-                                }
+                                .frame(width: timeColumnWidth)
+                                .background(Color(NSColor.controlBackgroundColor).opacity(0.05))
                             }
                         }
-                        .scrollDisabled(true)
-                    }
-                    .frame(width: timeColumnWidth)
 
-                    // Today column (without header)
-                    ScrollView {
+                        // Local time labels
+                        VStack(spacing: 0) {
+                            ForEach(0..<24, id: \.self) { hour in
+                                Text(formatHour(hour))
+                                    .font(.system(size: 14 * calendarManager.fontSize.scale))
+                                    .foregroundColor(.secondary)
+                                    .frame(width: timeColumnWidth, height: hourHeight, alignment: .top)
+                            }
+                        }
+                        .frame(width: timeColumnWidth)
+
+                        // Today column (without header)
                         TodayColumnContent(date: currentDate, hourHeight: hourHeight, highlightedEventIDs: highlightedEventIDs)
                             .frame(width: geometry.size.width - totalTimeWidth)
                     }

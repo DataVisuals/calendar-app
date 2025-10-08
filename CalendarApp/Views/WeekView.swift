@@ -20,19 +20,41 @@ struct WeekView: View {
             let totalTimeColumns = 1 + calendarManager.alternateTimezones.count
             let totalTimeWidth = CGFloat(totalTimeColumns) * timeColumnWidth
 
-            HStack(spacing: 0) {
-                // Alternate timezone columns
-                ForEach(0..<calendarManager.alternateTimezones.count, id: \.self) { index in
-                    let tzIdentifier = calendarManager.alternateTimezones[index]
-                    if let tz = TimeZone(identifier: tzIdentifier) {
-                        VStack(spacing: 0) {
-                            // Timezone header
+            VStack(spacing: 0) {
+                // Headers
+                HStack(spacing: 0) {
+                    // Timezone headers
+                    ForEach(0..<calendarManager.alternateTimezones.count, id: \.self) { index in
+                        let tzIdentifier = calendarManager.alternateTimezones[index]
+                        if let tz = TimeZone(identifier: tzIdentifier) {
                             Text(tz.abbreviation() ?? "")
                                 .font(.system(size: 10 * calendarManager.fontSize.scale, weight: .medium))
                                 .foregroundColor(.secondary)
-                                .frame(height: 70)
+                                .frame(width: timeColumnWidth, height: 70)
+                                .background(Color(NSColor.controlBackgroundColor).opacity(0.8))
+                        }
+                    }
 
-                            ScrollView {
+                    // Empty spacer for local time
+                    Text("")
+                        .frame(width: timeColumnWidth, height: 70)
+
+                    // Day headers
+                    HStack(spacing: 0) {
+                        ForEach(weekDays, id: \.self) { date in
+                            DayHeader(date: date)
+                                .frame(width: (geometry.size.width - totalTimeWidth) / 7, height: 70)
+                        }
+                    }
+                }
+
+                // Scrollable content
+                ScrollView {
+                    HStack(alignment: .top, spacing: 0) {
+                        // Timezone columns
+                        ForEach(0..<calendarManager.alternateTimezones.count, id: \.self) { index in
+                            let tzIdentifier = calendarManager.alternateTimezones[index]
+                            if let tz = TimeZone(identifier: tzIdentifier) {
                                 VStack(spacing: 0) {
                                     ForEach(0..<24, id: \.self) { hour in
                                         Text(formatHourForTimezone(hour, timezone: tz))
@@ -41,21 +63,12 @@ struct WeekView: View {
                                             .frame(width: timeColumnWidth, height: hourHeight, alignment: .top)
                                     }
                                 }
+                                .frame(width: timeColumnWidth)
+                                .background(Color(NSColor.controlBackgroundColor).opacity(0.05))
                             }
-                            .scrollDisabled(true)
                         }
-                        .frame(width: timeColumnWidth)
-                        .background(Color(NSColor.controlBackgroundColor).opacity(0.05))
-                    }
-                }
 
-                // Local time labels
-                VStack(spacing: 0) {
-                    // Header spacer
-                    Text("")
-                        .frame(height: 70)
-
-                    ScrollView {
+                        // Local time labels
                         VStack(spacing: 0) {
                             ForEach(0..<24, id: \.self) { hour in
                                 Text(formatHour(hour))
@@ -64,17 +77,14 @@ struct WeekView: View {
                                     .frame(width: timeColumnWidth, height: hourHeight, alignment: .top)
                             }
                         }
-                    }
-                    .scrollDisabled(true)
-                }
-                .frame(width: timeColumnWidth)
+                        .frame(width: timeColumnWidth)
 
-                // Days
-                ScrollView {
-                    HStack(spacing: 0) {
-                        ForEach(weekDays, id: \.self) { date in
-                            DayColumn(date: date, hourHeight: hourHeight, highlightedEventIDs: highlightedEventIDs)
-                                .frame(width: (geometry.size.width - totalTimeWidth) / 7)
+                        // Day columns
+                        HStack(spacing: 0) {
+                            ForEach(weekDays, id: \.self) { date in
+                                DayColumnContent(date: date, hourHeight: hourHeight, highlightedEventIDs: highlightedEventIDs)
+                                    .frame(width: (geometry.size.width - totalTimeWidth) / 7)
+                            }
                         }
                     }
                 }
@@ -140,7 +150,48 @@ struct WeekView: View {
     }
 }
 
-struct DayColumn: View {
+struct DayHeader: View {
+    @EnvironmentObject var calendarManager: CalendarManager
+    let date: Date
+
+    private var calendar: Calendar {
+        var cal = Calendar.current
+        cal.firstWeekday = 2
+        cal.timeZone = TimeZone.current
+        return cal
+    }
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(dayOfWeek)
+                .font(.system(size: 13 * calendarManager.fontSize.scale, weight: .medium))
+                .foregroundColor(.secondary)
+
+            Text("\(calendar.component(.day, from: date))")
+                .font(.system(size: 20 * calendarManager.fontSize.scale, weight: isToday ? .bold : .regular))
+                .foregroundColor(isToday ? .white : .primary)
+                .frame(width: 36, height: 36)
+                .background(
+                    Circle()
+                        .fill(isToday ? Color.blue : Color.clear)
+                )
+        }
+        .frame(maxWidth: .infinity)
+        .background(Color(NSColor.controlBackgroundColor))
+    }
+
+    private var isToday: Bool {
+        calendar.isDateInToday(date)
+    }
+
+    private var dayOfWeek: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE"
+        return formatter.string(from: date).uppercased()
+    }
+}
+
+struct DayColumnContent: View {
     @EnvironmentObject var calendarManager: CalendarManager
     @Environment(\.colorScheme) var colorScheme
     let date: Date
@@ -149,49 +200,28 @@ struct DayColumn: View {
 
     private var calendar: Calendar {
         var cal = Calendar.current
-        cal.firstWeekday = 2 // Monday = 2 (Sunday = 1)
+        cal.firstWeekday = 2
+        cal.timeZone = TimeZone.current
         return cal
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            VStack(spacing: 4) {
-                Text(dayOfWeek)
-                    .font(.system(size: 13 * calendarManager.fontSize.scale, weight: .medium))
-                    .foregroundColor(.secondary)
-
-                Text("\(calendar.component(.day, from: date))")
-                    .font(.system(size: 20 * calendarManager.fontSize.scale, weight: isToday ? .bold : .regular))
-                    .foregroundColor(isToday ? .white : .primary)
-                    .frame(width: 36, height: 36)
-                    .background(
-                        Circle()
-                            .fill(isToday ? Color.blue : Color.clear)
-                    )
+        ZStack(alignment: .topLeading) {
+            // Hour lines
+            VStack(spacing: 0) {
+                ForEach(0..<24, id: \.self) { hour in
+                    Rectangle()
+                        .fill(Color(NSColor.separatorColor))
+                        .frame(height: 0.5)
+                        .frame(maxWidth: .infinity)
+                    Spacer()
+                        .frame(height: hourHeight - 0.5)
+                }
             }
-            .frame(height: 70)
-            .frame(maxWidth: .infinity)
-            .background(Color(NSColor.controlBackgroundColor))
 
-            // Hour grid with events
-            ZStack(alignment: .topLeading) {
-                // Hour lines
-                VStack(spacing: 0) {
-                    ForEach(0..<24, id: \.self) { hour in
-                        Rectangle()
-                            .fill(Color(NSColor.separatorColor))
-                            .frame(height: 0.5)
-                            .frame(maxWidth: .infinity)
-                        Spacer()
-                            .frame(height: hourHeight - 0.5)
-                    }
-                }
-
-                // Events
-                ForEach(Array(dayEvents.enumerated()), id: \.offset) { _, event in
-                    EventBlock(event: event, hourHeight: hourHeight, date: date, isHighlighted: event.eventIdentifier.map { highlightedEventIDs.contains($0) } ?? false)
-                }
+            // Events
+            ForEach(Array(dayEvents.enumerated()), id: \.offset) { _, event in
+                EventBlock(event: event, hourHeight: hourHeight, date: date, isHighlighted: event.eventIdentifier.map { highlightedEventIDs.contains($0) } ?? false)
             }
         }
         .background(
@@ -208,19 +238,9 @@ struct DayColumn: View {
         )
     }
 
-    private var isToday: Bool {
-        calendar.isDateInToday(date)
-    }
-
     private var isWeekend: Bool {
         let weekday = calendar.component(.weekday, from: date)
-        return weekday == 1 || weekday == 7 // Sunday or Saturday
-    }
-
-    private var dayOfWeek: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEE"
-        return formatter.string(from: date).uppercased()
+        return weekday == 1 || weekday == 7
     }
 
     private var dayEvents: [EKEvent] {
@@ -242,6 +262,7 @@ struct EventBlock: View {
     private var calendar: Calendar {
         var cal = Calendar.current
         cal.firstWeekday = 2 // Monday = 2 (Sunday = 1)
+        cal.timeZone = TimeZone.current  // Explicitly use current timezone
         return cal
     }
 
@@ -308,14 +329,19 @@ struct EventBlock: View {
     }
 
     private var offsetY: CGFloat {
+        guard let eventStart = event.startDate else { return 0 }
+
         let startOfDay = calendar.startOfDay(for: date)
-        let secondsFromStart = event.startDate.timeIntervalSince(startOfDay)
+        let secondsFromStart = eventStart.timeIntervalSince(startOfDay)
         let hours = secondsFromStart / 3600
         return CGFloat(hours) * hourHeight
     }
 
     private var height: CGFloat {
-        let duration = event.endDate.timeIntervalSince(event.startDate)
+        guard let eventStart = event.startDate,
+              let eventEnd = event.endDate else { return 20 }
+
+        let duration = eventEnd.timeIntervalSince(eventStart)
         let hours = duration / 3600
         return max(CGFloat(hours) * hourHeight - 4, 20)
     }

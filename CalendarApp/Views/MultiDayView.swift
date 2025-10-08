@@ -28,19 +28,41 @@ struct MultiDayView: View {
             let totalTimeColumns = 1 + calendarManager.alternateTimezones.count
             let totalTimeWidth = CGFloat(totalTimeColumns) * timeColumnWidth
 
-            HStack(spacing: 0) {
-                // Alternate timezone columns
-                ForEach(0..<calendarManager.alternateTimezones.count, id: \.self) { index in
-                    let tzIdentifier = calendarManager.alternateTimezones[index]
-                    if let tz = TimeZone(identifier: tzIdentifier) {
-                        VStack(spacing: 0) {
-                            // Timezone header
+            VStack(spacing: 0) {
+                // Headers
+                HStack(spacing: 0) {
+                    // Timezone headers
+                    ForEach(0..<calendarManager.alternateTimezones.count, id: \.self) { index in
+                        let tzIdentifier = calendarManager.alternateTimezones[index]
+                        if let tz = TimeZone(identifier: tzIdentifier) {
                             Text(tz.abbreviation() ?? "")
                                 .font(.system(size: 10 * calendarManager.fontSize.scale, weight: .medium))
                                 .foregroundColor(.secondary)
-                                .frame(height: 70)
+                                .frame(width: timeColumnWidth, height: 70)
+                                .background(Color(NSColor.controlBackgroundColor).opacity(0.8))
+                        }
+                    }
 
-                            ScrollView {
+                    // Empty spacer for local time
+                    Text("")
+                        .frame(width: timeColumnWidth, height: 70)
+
+                    // Day headers
+                    HStack(spacing: 0) {
+                        ForEach(displayDays, id: \.self) { date in
+                            DayHeader(date: date)
+                                .frame(width: (geometry.size.width - totalTimeWidth) / CGFloat(displayDays.count), height: 70)
+                        }
+                    }
+                }
+
+                // Scrollable content
+                ScrollView {
+                    HStack(alignment: .top, spacing: 0) {
+                        // Timezone columns
+                        ForEach(0..<calendarManager.alternateTimezones.count, id: \.self) { index in
+                            let tzIdentifier = calendarManager.alternateTimezones[index]
+                            if let tz = TimeZone(identifier: tzIdentifier) {
                                 VStack(spacing: 0) {
                                     ForEach(0..<24, id: \.self) { hour in
                                         Text(formatHourForTimezone(hour, timezone: tz))
@@ -49,21 +71,12 @@ struct MultiDayView: View {
                                             .frame(width: timeColumnWidth, height: hourHeight, alignment: .top)
                                     }
                                 }
+                                .frame(width: timeColumnWidth)
+                                .background(Color(NSColor.controlBackgroundColor).opacity(0.05))
                             }
-                            .scrollDisabled(true)
                         }
-                        .frame(width: timeColumnWidth)
-                        .background(Color(NSColor.controlBackgroundColor).opacity(0.05))
-                    }
-                }
 
-                // Local time labels
-                VStack(spacing: 0) {
-                    // Header spacer
-                    Text("")
-                        .frame(height: 70)
-
-                    ScrollView {
+                        // Local time labels
                         VStack(spacing: 0) {
                             ForEach(0..<24, id: \.self) { hour in
                                 Text(formatHour(hour))
@@ -72,17 +85,14 @@ struct MultiDayView: View {
                                     .frame(width: timeColumnWidth, height: hourHeight, alignment: .top)
                             }
                         }
-                    }
-                    .scrollDisabled(true)
-                }
-                .frame(width: timeColumnWidth)
+                        .frame(width: timeColumnWidth)
 
-                // Days
-                ScrollView {
-                    HStack(spacing: 0) {
-                        ForEach(displayDays, id: \.self) { date in
-                            DayColumn(date: date, hourHeight: hourHeight, highlightedEventIDs: highlightedEventIDs)
-                                .frame(width: (geometry.size.width - totalTimeWidth) / CGFloat(displayDays.count))
+                        // Day columns
+                        HStack(spacing: 0) {
+                            ForEach(displayDays, id: \.self) { date in
+                                DayColumnContent(date: date, hourHeight: hourHeight, highlightedEventIDs: highlightedEventIDs)
+                                    .frame(width: (geometry.size.width - totalTimeWidth) / CGFloat(displayDays.count))
+                            }
                         }
                     }
                 }
