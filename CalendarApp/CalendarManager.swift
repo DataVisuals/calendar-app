@@ -222,8 +222,14 @@ class CalendarManager: ObservableObject {
             selectedCalendarIDs.insert(calendarID)
         }
         saveSelectedCalendarIDs()
+        clearEventCache()
         loadEvents()
         loadReminders()
+    }
+
+    private func clearEventCache() {
+        monthEventsCache.removeAll()
+        monthCacheTimestamp.removeAll()
     }
 
     var selectedCalendars: [EKCalendar] {
@@ -379,7 +385,8 @@ class CalendarManager: ObservableObject {
             return []
         }
 
-        let predicate = eventStore.predicateForEvents(withStart: monthStart, end: monthEnd, calendars: nil)
+        let calendarsToQuery = selectedCalendars.isEmpty ? nil : selectedCalendars
+        let predicate = eventStore.predicateForEvents(withStart: monthStart, end: monthEnd, calendars: calendarsToQuery)
         let monthEvents = eventStore.events(matching: predicate)
 
         // Cache the results

@@ -5,15 +5,18 @@ struct SettingsView: View {
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 0) {
             Text("Settings")
                 .font(.system(size: 24, weight: .bold))
+                .padding(.top, 20)
+                .padding(.bottom, 16)
 
             Divider()
 
-            VStack(alignment: .leading, spacing: 20) {
-                // Calendar Access
-                VStack(alignment: .leading, spacing: 12) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    // Calendar Access
+                    VStack(alignment: .leading, spacing: 12) {
                     Text("Calendar Access")
                         .font(.system(size: 16, weight: .semibold))
 
@@ -154,12 +157,12 @@ struct SettingsView: View {
                             .foregroundColor(.secondary)
                     }
                 }
+                }
+                .padding()
             }
-
-            Spacer()
         }
-        .padding()
-        .frame(width: 450, height: 650)
+        .frame(width: 450)
+        .frame(minHeight: 500, maxHeight: 700)
     }
 }
 
