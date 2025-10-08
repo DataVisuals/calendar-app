@@ -16,12 +16,28 @@ struct TodayView: View {
 
     var body: some View {
         GeometryReader { geometry in
+            let timeColumnWidth: CGFloat = 60
+            let totalTimeColumns = 1 + calendarManager.alternateTimezones.count
+            let totalTimeWidth = CGFloat(totalTimeColumns) * timeColumnWidth
+
             VStack(spacing: 0) {
                 // Sticky header
                 HStack(spacing: 0) {
-                    // Empty spacer for time column
+                    // Empty spacer for timezone columns
+                    ForEach(0..<calendarManager.alternateTimezones.count, id: \.self) { index in
+                        let tzIdentifier = calendarManager.alternateTimezones[index]
+                        if let tz = TimeZone(identifier: tzIdentifier) {
+                            Text(tz.abbreviation() ?? "")
+                                .font(.system(size: 10 * calendarManager.fontSize.scale, weight: .medium))
+                                .foregroundColor(.secondary)
+                                .frame(width: timeColumnWidth, height: 70)
+                                .background(Color(NSColor.controlBackgroundColor).opacity(0.8))
+                        }
+                    }
+
+                    // Empty spacer for local time column
                     Color.clear
-                        .frame(width: 60, height: 70)
+                        .frame(width: timeColumnWidth, height: 70)
 
                     // Date header
                     VStack(spacing: 4) {
@@ -46,7 +62,29 @@ struct TodayView: View {
 
                 // Scrollable content
                 HStack(spacing: 0) {
-                    // Time labels
+                    // Alternate timezone columns
+                    ForEach(0..<calendarManager.alternateTimezones.count, id: \.self) { index in
+                        let tzIdentifier = calendarManager.alternateTimezones[index]
+                        if let tz = TimeZone(identifier: tzIdentifier) {
+                            VStack(spacing: 0) {
+                                ScrollView {
+                                    VStack(spacing: 0) {
+                                        ForEach(0..<24, id: \.self) { hour in
+                                            Text(formatHourForTimezone(hour, timezone: tz))
+                                                .font(.system(size: 12 * calendarManager.fontSize.scale))
+                                                .foregroundColor(.secondary.opacity(0.7))
+                                                .frame(width: timeColumnWidth, height: hourHeight, alignment: .top)
+                                        }
+                                    }
+                                }
+                                .scrollDisabled(true)
+                            }
+                            .frame(width: timeColumnWidth)
+                            .background(Color(NSColor.controlBackgroundColor).opacity(0.05))
+                        }
+                    }
+
+                    // Local time labels
                     VStack(spacing: 0) {
                         ScrollView {
                             VStack(spacing: 0) {
@@ -54,18 +92,18 @@ struct TodayView: View {
                                     Text(formatHour(hour))
                                         .font(.system(size: 14 * calendarManager.fontSize.scale))
                                         .foregroundColor(.secondary)
-                                        .frame(width: 60, height: hourHeight, alignment: .top)
+                                        .frame(width: timeColumnWidth, height: hourHeight, alignment: .top)
                                 }
                             }
                         }
                         .scrollDisabled(true)
                     }
-                    .frame(width: 60)
+                    .frame(width: timeColumnWidth)
 
                     // Today column (without header)
                     ScrollView {
                         TodayColumnContent(date: currentDate, hourHeight: hourHeight, highlightedEventIDs: highlightedEventIDs)
-                            .frame(width: geometry.size.width - 60)
+                            .frame(width: geometry.size.width - totalTimeWidth)
                     }
                 }
             }
@@ -83,6 +121,18 @@ struct TodayView: View {
         formatter.dateFormat = "ha"
         let date = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: Date()) ?? Date()
         return formatter.string(from: date).lowercased()
+    }
+
+    private func formatHourForTimezone(_ hour: Int, timezone: TimeZone) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "ha"
+        formatter.timeZone = timezone
+
+        // Create a date in local time for the given hour
+        let localDate = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: currentDate) ?? Date()
+
+        // Format it in the target timezone
+        return formatter.string(from: localDate).lowercased()
     }
 }
 
