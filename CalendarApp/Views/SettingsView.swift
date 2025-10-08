@@ -79,30 +79,28 @@ struct SettingsView: View {
                         .font(.system(size: 16, weight: .semibold))
 
                     if calendarManager.hasAccess && !calendarManager.calendars.isEmpty {
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 8) {
-                                ForEach(calendarManager.calendars, id: \.calendarIdentifier) { calendar in
-                                    HStack(spacing: 10) {
-                                        Toggle("", isOn: Binding(
-                                            get: { calendarManager.selectedCalendarIDs.contains(calendar.calendarIdentifier) },
-                                            set: { _ in calendarManager.toggleCalendar(calendar.calendarIdentifier) }
-                                        ))
-                                        .labelsHidden()
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(calendarManager.calendars, id: \.calendarIdentifier) { calendar in
+                                HStack(spacing: 10) {
+                                    Toggle(isOn: Binding(
+                                        get: { calendarManager.selectedCalendarIDs.contains(calendar.calendarIdentifier) },
+                                        set: { _ in calendarManager.toggleCalendar(calendar.calendarIdentifier) }
+                                    )) {
+                                        HStack(spacing: 8) {
+                                            Circle()
+                                                .fill(calendarManager.color(for: calendar, colorScheme: colorScheme))
+                                                .frame(width: 12, height: 12)
 
-                                        Circle()
-                                            .fill(calendarManager.color(for: calendar, colorScheme: colorScheme))
-                                            .frame(width: 12, height: 12)
-
-                                        Text(calendar.title)
-                                            .font(.system(size: 13))
-
-                                        Spacer()
+                                            Text(calendar.title)
+                                                .font(.system(size: 13))
+                                        }
                                     }
-                                    .padding(.vertical, 4)
+                                    .toggleStyle(.checkbox)
                                 }
+                                .padding(.vertical, 2)
                             }
                         }
-                        .frame(maxHeight: 150)
+                        .padding(.leading, 4)
 
                         Text("Select which calendars to display")
                             .font(.system(size: 13))
