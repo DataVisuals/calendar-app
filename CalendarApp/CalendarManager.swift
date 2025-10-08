@@ -439,20 +439,32 @@ class CalendarManager: ObservableObject {
     }
 
     func moveEvent(_ event: EKEvent, to newDate: Date) throws {
-        // Always fetch fresh from the store to avoid "does not belong to store" error
-        guard let eventIdentifier = event.eventIdentifier else {
-            throw NSError(domain: "CalendarManager", code: -2, userInfo: [NSLocalizedDescriptionKey: "Event has no identifier"])
+        // Try to get event from store by identifier first
+        let storeEvent: EKEvent?
+
+        if let eventIdentifier = event.eventIdentifier {
+            storeEvent = eventStore.event(withIdentifier: eventIdentifier)
+        } else {
+            // If no identifier, try to find by properties
+            print("Event has no identifier, searching by properties")
+            let properties = EventProperties(
+                title: event.title ?? "",
+                startDate: event.startDate,
+                endDate: event.endDate,
+                calendarIdentifier: event.calendar.calendarIdentifier
+            )
+            storeEvent = findEvent(byProperties: properties)
         }
 
-        guard let storeEvent = eventStore.event(withIdentifier: eventIdentifier) else {
+        guard let foundEvent = storeEvent else {
             throw NSError(domain: "CalendarManager", code: -3, userInfo: [NSLocalizedDescriptionKey: "Event not found in store"])
         }
 
-        let duration = storeEvent.endDate.timeIntervalSince(storeEvent.startDate)
-        storeEvent.startDate = newDate
-        storeEvent.endDate = newDate.addingTimeInterval(duration)
+        let duration = foundEvent.endDate.timeIntervalSince(foundEvent.startDate)
+        foundEvent.startDate = newDate
+        foundEvent.endDate = newDate.addingTimeInterval(duration)
 
-        try eventStore.save(storeEvent, span: .thisEvent, commit: true)
+        try eventStore.save(foundEvent, span: .thisEvent, commit: true)
 
         // Reload events to get fresh data
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in

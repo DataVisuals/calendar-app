@@ -84,8 +84,10 @@ struct ContentView: View {
             }
         }
         .onAppear {
-            calendarManager.loadEvents()
-            calendarManager.loadReminders()
+            if calendarManager.hasAccess {
+                calendarManager.loadEvents()
+                calendarManager.loadReminders()
+            }
         }
         .applyViewShortcuts(selectedView: $selectedView)
         .applySearchShortcut(showingSearch: $showingSearch, searchFocused: $searchFocused)
