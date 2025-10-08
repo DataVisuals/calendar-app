@@ -140,14 +140,17 @@ struct TodayColumn: View {
             let nextEvent = events[i + 1]
 
             // Check if there's a gap between current event end and next event start
-            if currentEvent.endDate < nextEvent.startDate {
-                let gapStart = currentEvent.endDate
-                let gapEnd = nextEvent.startDate
-                let duration = gapEnd.timeIntervalSince(gapStart)
+            guard let currentEnd = currentEvent.endDate,
+                  let nextStart = nextEvent.startDate else {
+                continue
+            }
+
+            if currentEnd < nextStart {
+                let duration = nextStart.timeIntervalSince(currentEnd)
 
                 // Only show gaps of at least 15 minutes
                 if duration >= 900 {
-                    let secondsFromStart = gapStart.timeIntervalSince(startOfDay)
+                    let secondsFromStart = currentEnd.timeIntervalSince(startOfDay)
                     let hours = secondsFromStart / 3600
                     let offsetY = CGFloat(hours) * hourHeight
 
