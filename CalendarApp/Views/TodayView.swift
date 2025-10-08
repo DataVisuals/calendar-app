@@ -16,34 +16,66 @@ struct TodayView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            HStack(spacing: 0) {
-                // Time labels
-                VStack(spacing: 0) {
-                    // Header spacer
-                    Text("")
-                        .frame(height: 70)
+            VStack(spacing: 0) {
+                // Sticky header
+                HStack(spacing: 0) {
+                    // Empty spacer for time column
+                    Color.clear
+                        .frame(width: 60, height: 70)
 
-                    ScrollView {
-                        VStack(spacing: 0) {
-                            ForEach(0..<24, id: \.self) { hour in
-                                Text(formatHour(hour))
-                                    .font(.system(size: 14 * calendarManager.fontSize.scale))
-                                    .foregroundColor(.secondary)
-                                    .frame(width: 60, height: hourHeight, alignment: .top)
+                    // Date header
+                    VStack(spacing: 4) {
+                        Text(dayOfWeek)
+                            .font(.system(size: 13 * calendarManager.fontSize.scale, weight: .medium))
+                            .foregroundColor(.secondary)
+
+                        Text("\(calendar.component(.day, from: currentDate))")
+                            .font(.system(size: 20 * calendarManager.fontSize.scale, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(width: 36, height: 36)
+                            .background(
+                                Circle()
+                                    .fill(Color.blue)
+                            )
+                    }
+                    .frame(height: 70)
+                    .frame(maxWidth: .infinity)
+                    .background(Color(NSColor.controlBackgroundColor))
+                }
+                .border(Color(NSColor.separatorColor), width: 0.5)
+
+                // Scrollable content
+                HStack(spacing: 0) {
+                    // Time labels
+                    VStack(spacing: 0) {
+                        ScrollView {
+                            VStack(spacing: 0) {
+                                ForEach(0..<24, id: \.self) { hour in
+                                    Text(formatHour(hour))
+                                        .font(.system(size: 14 * calendarManager.fontSize.scale))
+                                        .foregroundColor(.secondary)
+                                        .frame(width: 60, height: hourHeight, alignment: .top)
+                                }
                             }
                         }
+                        .scrollDisabled(true)
                     }
-                    .scrollDisabled(true)
-                }
-                .frame(width: 60)
+                    .frame(width: 60)
 
-                // Today column
-                ScrollView {
-                    TodayColumn(date: currentDate, hourHeight: hourHeight, highlightedEventIDs: highlightedEventIDs)
-                        .frame(width: geometry.size.width - 60)
+                    // Today column (without header)
+                    ScrollView {
+                        TodayColumnContent(date: currentDate, hourHeight: hourHeight, highlightedEventIDs: highlightedEventIDs)
+                            .frame(width: geometry.size.width - 60)
+                    }
                 }
             }
         }
+    }
+
+    private var dayOfWeek: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE"
+        return formatter.string(from: currentDate).uppercased()
     }
 
     private func formatHour(_ hour: Int) -> String {
@@ -54,7 +86,7 @@ struct TodayView: View {
     }
 }
 
-struct TodayColumn: View {
+struct TodayColumnContent: View {
     @EnvironmentObject var calendarManager: CalendarManager
     @Environment(\.colorScheme) var colorScheme
     let date: Date
@@ -68,59 +100,32 @@ struct TodayColumn: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            VStack(spacing: 4) {
-                Text(dayOfWeek)
-                    .font(.system(size: 13 * calendarManager.fontSize.scale, weight: .medium))
-                    .foregroundColor(.secondary)
-
-                Text("\(calendar.component(.day, from: date))")
-                    .font(.system(size: 20 * calendarManager.fontSize.scale, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(width: 36, height: 36)
-                    .background(
-                        Circle()
-                            .fill(Color.blue)
-                    )
+        // Hour grid with events and gaps
+        ZStack(alignment: .topLeading) {
+            // Hour lines
+            VStack(spacing: 0) {
+                ForEach(0..<24, id: \.self) { hour in
+                    Rectangle()
+                        .fill(Color(NSColor.separatorColor))
+                        .frame(height: 0.5)
+                        .frame(maxWidth: .infinity)
+                    Spacer()
+                        .frame(height: hourHeight - 0.5)
+                }
             }
-            .frame(height: 70)
-            .frame(maxWidth: .infinity)
-            .background(Color(NSColor.controlBackgroundColor))
 
-            // Hour grid with events and gaps
-            ZStack(alignment: .topLeading) {
-                // Hour lines
-                VStack(spacing: 0) {
-                    ForEach(0..<24, id: \.self) { hour in
-                        Rectangle()
-                            .fill(Color(NSColor.separatorColor))
-                            .frame(height: 0.5)
-                            .frame(maxWidth: .infinity)
-                        Spacer()
-                            .frame(height: hourHeight - 0.5)
-                    }
-                }
+            // Events
+            ForEach(Array(dayEvents.enumerated()), id: \.offset) { _, event in
+                TodayEventBlock(event: event, hourHeight: hourHeight, date: date, isHighlighted: event.eventIdentifier.map { highlightedEventIDs.contains($0) } ?? false)
+            }
 
-                // Events
-                ForEach(Array(dayEvents.enumerated()), id: \.offset) { _, event in
-                    TodayEventBlock(event: event, hourHeight: hourHeight, date: date, isHighlighted: event.eventIdentifier.map { highlightedEventIDs.contains($0) } ?? false)
-                }
-
-                // Gaps
-                ForEach(Array(eventGaps.enumerated()), id: \.offset) { _, gap in
-                    GapIndicator(gap: gap, hourHeight: hourHeight)
-                }
+            // Gaps
+            ForEach(Array(eventGaps.enumerated()), id: \.offset) { _, gap in
+                GapIndicator(gap: gap, hourHeight: hourHeight)
             }
         }
         .background(Color.clear)
         .border(Color(NSColor.separatorColor), width: 0.5)
-    }
-
-    private var dayOfWeek: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEE"
-        return formatter.string(from: date).uppercased()
     }
 
     private var dayEvents: [EKEvent] {

@@ -501,8 +501,9 @@ struct ContentView: View {
                 print("Error creating quick event: \(error)")
             }
         } else {
-            // Fallback: create event with raw text as title
-            let startDate = Date()
+            // Fallback: create event with raw text as title, default to 6am today
+            let startOfToday = calendar.startOfDay(for: Date())
+            let startDate = calendar.date(bySettingHour: 6, minute: 0, second: 0, of: startOfToday) ?? Date()
             let endDate = calendar.date(byAdding: .hour, value: 1, to: startDate) ?? startDate
 
             do {

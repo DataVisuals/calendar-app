@@ -56,10 +56,12 @@ class CalendarManager: ObservableObject {
     @AppStorage("temperatureUnit") var temperatureUnit: TemperatureUnit = .celsius
     @Published var defaultCalendar: EKCalendar?
     @Published var selectedCalendarIDs: Set<String> = []
+    @Published var alternateTimezones: [String] = [] // Timezone identifiers
 
     let eventStore = EKEventStore()
     private let calendar = Calendar.current
     private let selectedCalendarsKey = "selectedCalendarIDs"
+    private let alternateTimezonesKey = "alternateTimezones"
 
     // Short-lived cache to avoid excessive EventKit queries during rendering
     private var monthEventsCache: [Date: [EKEvent]] = [:]
@@ -75,6 +77,7 @@ class CalendarManager: ObservableObject {
         print("📱 CalendarManager init - Font size: \(fontSize.rawValue), Temp unit: \(temperatureUnit.rawValue)")
 
         loadSelectedCalendarIDs()
+        loadAlternateTimezones()
         checkAccess()
 
         // Observe defaultCalendar changes and persist
@@ -212,6 +215,21 @@ class CalendarManager: ObservableObject {
         if let data = try? JSONEncoder().encode(selectedCalendarIDs) {
             UserDefaults.standard.set(data, forKey: selectedCalendarsKey)
             print("💾 Saved \(selectedCalendarIDs.count) selected calendar IDs to UserDefaults")
+        }
+    }
+
+    private func loadAlternateTimezones() {
+        if let data = UserDefaults.standard.data(forKey: alternateTimezonesKey),
+           let timezones = try? JSONDecoder().decode([String].self, from: data) {
+            alternateTimezones = timezones
+            print("📥 Loaded \(timezones.count) alternate timezones from UserDefaults")
+        }
+    }
+
+    func saveAlternateTimezones() {
+        if let data = try? JSONEncoder().encode(alternateTimezones) {
+            UserDefaults.standard.set(data, forKey: alternateTimezonesKey)
+            print("💾 Saved \(alternateTimezones.count) alternate timezones to UserDefaults")
         }
     }
 

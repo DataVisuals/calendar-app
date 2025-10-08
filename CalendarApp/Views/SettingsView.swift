@@ -1,8 +1,31 @@
 import SwiftUI
 
+struct TimezoneInfo {
+    let identifier: String
+    let displayName: String
+}
+
 struct SettingsView: View {
     @EnvironmentObject var calendarManager: CalendarManager
     @Environment(\.colorScheme) var colorScheme
+
+    // Common timezones for selection
+    private let commonTimezones = [
+        TimezoneInfo(identifier: "America/New_York", displayName: "Eastern (US)"),
+        TimezoneInfo(identifier: "America/Chicago", displayName: "Central (US)"),
+        TimezoneInfo(identifier: "America/Denver", displayName: "Mountain (US)"),
+        TimezoneInfo(identifier: "America/Los_Angeles", displayName: "Pacific (US)"),
+        TimezoneInfo(identifier: "Europe/London", displayName: "London (UK)"),
+        TimezoneInfo(identifier: "Europe/Paris", displayName: "Paris (CET)"),
+        TimezoneInfo(identifier: "Europe/Berlin", displayName: "Berlin (CET)"),
+        TimezoneInfo(identifier: "Asia/Tokyo", displayName: "Tokyo (JST)"),
+        TimezoneInfo(identifier: "Asia/Shanghai", displayName: "Shanghai (CST)"),
+        TimezoneInfo(identifier: "Asia/Hong_Kong", displayName: "Hong Kong (HKT)"),
+        TimezoneInfo(identifier: "Asia/Singapore", displayName: "Singapore (SGT)"),
+        TimezoneInfo(identifier: "Asia/Dubai", displayName: "Dubai (GST)"),
+        TimezoneInfo(identifier: "Australia/Sydney", displayName: "Sydney (AEST)"),
+        TimezoneInfo(identifier: "Pacific/Auckland", displayName: "Auckland (NZST)")
+    ]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -72,6 +95,45 @@ struct SettingsView: View {
                     Text("Temperature display in weather forecasts")
                         .font(.system(size: 13))
                         .foregroundColor(.secondary)
+                }
+
+                Divider()
+
+                // Alternate Timezones
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Alternate Timezones")
+                        .font(.system(size: 16, weight: .semibold))
+
+                    Text("Display additional timezone columns in time-based views")
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(commonTimezones, id: \.identifier) { tz in
+                            HStack(spacing: 10) {
+                                Toggle(isOn: Binding(
+                                    get: { calendarManager.alternateTimezones.contains(tz.identifier) },
+                                    set: { isOn in
+                                        if isOn {
+                                            if !calendarManager.alternateTimezones.contains(tz.identifier) {
+                                                calendarManager.alternateTimezones.append(tz.identifier)
+                                                calendarManager.saveAlternateTimezones()
+                                            }
+                                        } else {
+                                            calendarManager.alternateTimezones.removeAll { $0 == tz.identifier }
+                                            calendarManager.saveAlternateTimezones()
+                                        }
+                                    }
+                                )) {
+                                    Text(tz.displayName)
+                                        .font(.system(size: 13))
+                                }
+                                .toggleStyle(.checkbox)
+                            }
+                            .padding(.vertical, 2)
+                        }
+                    }
+                    .padding(.leading, 4)
                 }
 
                 Divider()

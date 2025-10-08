@@ -53,7 +53,7 @@ class NaturalLanguageParser {
         }
 
         // Extract time
-        var hour = 9
+        var hour = 6
         var minute = 0
 
         if let timeMatch = text.range(of: #"(\d{1,2}):(\d{2})\s*(am|pm)?"#, options: .regularExpression) {
@@ -158,7 +158,7 @@ class NaturalLanguageParser {
         }
 
         // Extract time
-        var hour = 9
+        var hour = 6
         var minute = 0
         var hasTime = false
 
@@ -201,8 +201,8 @@ class NaturalLanguageParser {
         if let baseDate = dueDate, hasTime {
             dueDate = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: baseDate)
         } else if let baseDate = dueDate {
-            // Set to 9 AM by default if no time specified
-            dueDate = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: baseDate)
+            // Set to 6 AM by default if no time specified
+            dueDate = calendar.date(bySettingHour: 6, minute: 0, second: 0, of: baseDate)
         }
 
         // Extract title (everything before time/date markers)
