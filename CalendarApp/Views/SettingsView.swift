@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject var calendarManager: CalendarManager
+    @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         VStack(spacing: 20) {
@@ -72,6 +73,48 @@ struct SettingsView: View {
 
                 Divider()
 
+                // Visible Calendars
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Visible Calendars")
+                        .font(.system(size: 16, weight: .semibold))
+
+                    if calendarManager.hasAccess && !calendarManager.calendars.isEmpty {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 8) {
+                                ForEach(calendarManager.calendars, id: \.calendarIdentifier) { calendar in
+                                    HStack(spacing: 10) {
+                                        Toggle("", isOn: Binding(
+                                            get: { calendarManager.selectedCalendarIDs.contains(calendar.calendarIdentifier) },
+                                            set: { _ in calendarManager.toggleCalendar(calendar.calendarIdentifier) }
+                                        ))
+                                        .labelsHidden()
+
+                                        Circle()
+                                            .fill(calendarManager.color(for: calendar, colorScheme: colorScheme))
+                                            .frame(width: 12, height: 12)
+
+                                        Text(calendar.title)
+                                            .font(.system(size: 13))
+
+                                        Spacer()
+                                    }
+                                    .padding(.vertical, 4)
+                                }
+                            }
+                        }
+                        .frame(maxHeight: 150)
+
+                        Text("Select which calendars to display")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("No calendars available")
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                Divider()
+
                 // Default Calendar
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Default Calendar")
@@ -118,7 +161,7 @@ struct SettingsView: View {
             Spacer()
         }
         .padding()
-        .frame(width: 450, height: 500)
+        .frame(width: 450, height: 650)
     }
 }
 

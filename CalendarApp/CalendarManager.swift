@@ -55,9 +55,11 @@ class CalendarManager: ObservableObject {
     @AppStorage("fontSize") var fontSize: FontSize = .medium
     @AppStorage("temperatureUnit") var temperatureUnit: TemperatureUnit = .celsius
     @Published var defaultCalendar: EKCalendar?
+    @Published var selectedCalendarIDs: Set<String> = []
 
     let eventStore = EKEventStore()
     private let calendar = Calendar.current
+    private let selectedCalendarsKey = "selectedCalendarIDs"
 
     // Short-lived cache to avoid excessive EventKit queries during rendering
     private var monthEventsCache: [Date: [EKEvent]] = [:]
@@ -72,6 +74,7 @@ class CalendarManager: ObservableObject {
         // @AppStorage automatically handles loading and saving fontSize and temperatureUnit
         print("📱 CalendarManager init - Font size: \(fontSize.rawValue), Temp unit: \(temperatureUnit.rawValue)")
 
+        loadSelectedCalendarIDs()
         checkAccess()
 
         // Observe defaultCalendar changes and persist
@@ -168,6 +171,13 @@ class CalendarManager: ObservableObject {
         calendars = eventStore.calendars(for: .event)
         print("Loaded \(calendars.count) calendars")
 
+        // Initialize selected calendars if empty (first time)
+        if selectedCalendarIDs.isEmpty {
+            selectedCalendarIDs = Set(calendars.map { $0.calendarIdentifier })
+            saveSelectedCalendarIDs()
+            print("✓ Initialized all calendars as selected")
+        }
+
         // Restore default calendar from UserDefaults
         if let savedIdentifier = UserDefaults.standard.string(forKey: "defaultCalendarIdentifier") {
             print("📥 Found saved default calendar ID: \(savedIdentifier)")
@@ -190,6 +200,36 @@ class CalendarManager: ObservableObject {
         }
     }
 
+    private func loadSelectedCalendarIDs() {
+        if let data = UserDefaults.standard.data(forKey: selectedCalendarsKey),
+           let ids = try? JSONDecoder().decode(Set<String>.self, from: data) {
+            selectedCalendarIDs = ids
+            print("📥 Loaded \(ids.count) selected calendar IDs from UserDefaults")
+        }
+    }
+
+    func saveSelectedCalendarIDs() {
+        if let data = try? JSONEncoder().encode(selectedCalendarIDs) {
+            UserDefaults.standard.set(data, forKey: selectedCalendarsKey)
+            print("💾 Saved \(selectedCalendarIDs.count) selected calendar IDs to UserDefaults")
+        }
+    }
+
+    func toggleCalendar(_ calendarID: String) {
+        if selectedCalendarIDs.contains(calendarID) {
+            selectedCalendarIDs.remove(calendarID)
+        } else {
+            selectedCalendarIDs.insert(calendarID)
+        }
+        saveSelectedCalendarIDs()
+        loadEvents()
+        loadReminders()
+    }
+
+    var selectedCalendars: [EKCalendar] {
+        calendars.filter { selectedCalendarIDs.contains($0.calendarIdentifier) }
+    }
+
     private var lastLoadTime: Date?
     private let minimumLoadInterval: TimeInterval = 0.5 // Minimum 0.5 seconds between loads
 
@@ -206,12 +246,20 @@ class CalendarManager: ObservableObject {
         let startDate = calendar.date(byAdding: .month, value: -1, to: Date()) ?? Date()
         let endDate = calendar.date(byAdding: .month, value: 2, to: Date()) ?? Date()
 
-        let predicate = eventStore.predicateForEvents(withStart: startDate, end: endDate, calendars: nil)
+        // Filter by selected calendars
+        let calendarsToQuery = selectedCalendars.isEmpty ? nil : selectedCalendars
+        let predicate = eventStore.predicateForEvents(withStart: startDate, end: endDate, calendars: calendarsToQuery)
         events = eventStore.events(matching: predicate)
     }
 
     func loadReminders() {
-        let predicate = eventStore.predicateForReminders(in: nil)
+        // Filter by selected calendars
+        let calendarsForReminders = eventStore.calendars(for: .reminder).filter {
+            selectedCalendarIDs.contains($0.calendarIdentifier)
+        }
+        let calendarsToQuery = calendarsForReminders.isEmpty ? nil : calendarsForReminders
+
+        let predicate = eventStore.predicateForReminders(in: calendarsToQuery)
         eventStore.fetchReminders(matching: predicate) { [weak self] reminders in
             DispatchQueue.main.async {
                 self?.reminders = reminders?.filter {
