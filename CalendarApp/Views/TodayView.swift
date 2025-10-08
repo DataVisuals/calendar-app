@@ -21,6 +21,10 @@ struct TodayView: View {
             let totalTimeWidth = CGFloat(totalTimeColumns) * timeColumnWidth
 
             VStack(spacing: 0) {
+                // News feed
+                NewsFeedView()
+                    .environmentObject(calendarManager)
+
                 // Sticky header
                 HStack(spacing: 0) {
                     // Empty spacer for timezone columns
@@ -57,6 +61,7 @@ struct TodayView: View {
                     .frame(width: geometry.size.width - totalTimeWidth, height: 70)
                     .background(Color(NSColor.controlBackgroundColor))
                 }
+                .frame(width: geometry.size.width, height: 70)
                 .border(Color(NSColor.separatorColor), width: 0.5)
 
                 // Scrollable content
