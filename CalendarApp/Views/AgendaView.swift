@@ -3,6 +3,7 @@ import EventKit
 
 struct AgendaView: View {
     @EnvironmentObject var calendarManager: CalendarManager
+    @Environment(\.colorScheme) var colorScheme
     @Binding var currentDate: Date
     let highlightedEventIDs: Set<String>
 
@@ -39,6 +40,7 @@ struct AgendaView: View {
 
 struct AgendaDaySection: View {
     @EnvironmentObject var calendarManager: CalendarManager
+    @Environment(\.colorScheme) var colorScheme
     let date: Date
     let highlightedEventIDs: Set<String>
 
@@ -114,6 +116,7 @@ struct AgendaDaySection: View {
 
 struct AgendaEventRow: View {
     @EnvironmentObject var calendarManager: CalendarManager
+    @Environment(\.colorScheme) var colorScheme
     let event: EKEvent
     let isHighlighted: Bool
 
@@ -135,7 +138,7 @@ struct AgendaEventRow: View {
             // Event details
             HStack(alignment: .top, spacing: 8) {
                 Rectangle()
-                    .fill(calendarManager.color(for: event.calendar))
+                    .fill(calendarManager.color(for: event.calendar, colorScheme: colorScheme))
                     .frame(width: isHighlighted ? 6 : 4)
                     .cornerRadius(2)
 
@@ -143,7 +146,7 @@ struct AgendaEventRow: View {
                     HStack(spacing: 6) {
                         Image(systemName: EventIconHelper.icon(for: event))
                             .font(.system(size: 14 * calendarManager.fontSize.scale))
-                            .foregroundColor(calendarManager.color(for: event.calendar))
+                            .foregroundColor(calendarManager.color(for: event.calendar, colorScheme: colorScheme))
 
                         Text(event.title ?? "Untitled")
                             .font(.system(size: 16 * calendarManager.fontSize.scale, weight: .medium))
@@ -172,11 +175,11 @@ struct AgendaEventRow: View {
         .padding(.horizontal, 12)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(calendarManager.color(for: event.calendar).opacity(isHighlighted ? 0.25 : 0.1))
+                .fill(calendarManager.color(for: event.calendar, colorScheme: colorScheme).opacity(isHighlighted ? 0.25 : 0.1))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(isHighlighted ? calendarManager.color(for: event.calendar).opacity(0.8) : Color.clear, lineWidth: 2)
+                .stroke(isHighlighted ? calendarManager.color(for: event.calendar, colorScheme: colorScheme).opacity(0.8) : Color.clear, lineWidth: 2)
         )
     }
 

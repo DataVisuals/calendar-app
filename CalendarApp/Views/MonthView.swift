@@ -3,6 +3,7 @@ import EventKit
 
 struct MonthView: View {
     @EnvironmentObject var calendarManager: CalendarManager
+    @Environment(\.colorScheme) var colorScheme
     @Binding var currentDate: Date
     let highlightedEventIDs: Set<String>
     let weatherForecasts: [DailyWeatherInfo]
@@ -84,6 +85,7 @@ struct MonthView: View {
 
 struct DayCell: View {
     @EnvironmentObject var calendarManager: CalendarManager
+    @Environment(\.colorScheme) var colorScheme
     let date: Date
     let currentMonth: Bool
     let highlightedEventIDs: Set<String>
@@ -230,6 +232,7 @@ struct DayCell: View {
 
 struct EventBadge: View {
     @EnvironmentObject var calendarManager: CalendarManager
+    @Environment(\.colorScheme) var colorScheme
     let event: EKEvent
     let compact: Bool
     let isHighlighted: Bool
@@ -240,7 +243,7 @@ struct EventBadge: View {
         HStack(alignment: .top, spacing: 4) {
             Image(systemName: EventIconHelper.icon(for: event))
                 .font(.system(size: (compact ? 11 : 13) * calendarManager.fontSize.scale))
-                .foregroundColor(calendarManager.color(for: event.calendar))
+                .foregroundColor(calendarManager.color(for: event.calendar, colorScheme: colorScheme))
                 .frame(width: compact ? 14 : 16)
                 .padding(.top, 1)
 
@@ -254,12 +257,22 @@ struct EventBadge: View {
         .padding(.vertical, compact ? 3 : 4)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(calendarManager.color(for: event.calendar).opacity(isHighlighted ? 0.35 : 0.15))
+            ZStack {
+                // Regular background
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(calendarManager.color(for: event.calendar, colorScheme: colorScheme).opacity(0.15))
+
+                // Highlighter pen overlay for search matches
+                if isHighlighted {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.yellow.opacity(0.5))
+                        .shadow(color: Color.yellow.opacity(0.3), radius: 4, x: 0, y: 0)
+                }
+            }
         )
         .overlay(
             RoundedRectangle(cornerRadius: 4)
-                .stroke(isHighlighted ? calendarManager.color(for: event.calendar).opacity(0.8) : Color.clear, lineWidth: 2)
+                .stroke(isHighlighted ? Color.yellow.opacity(0.9) : Color.clear, lineWidth: 2)
         )
         .onDrag {
             draggedEvent = event

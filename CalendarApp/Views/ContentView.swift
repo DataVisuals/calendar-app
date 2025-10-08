@@ -38,8 +38,11 @@ struct ContentView: View {
     @State private var newEventDate: Date?
     @State private var eventIdToEdit: String?
     @State private var eventPropertiesToEdit: EventProperties?
+    @State private var showingNewReminder = false
+    @State private var reminderIdToEdit: String?
     @State private var showingSearch = false
     @State private var searchText = ""
+    @State private var searchForward = true // true = forward (/), false = backward (\)
     @State private var highlightedEventIDs: Set<String> = []
     @FocusState private var searchFocused: Bool
     @State private var quickAddText = ""
@@ -68,11 +71,19 @@ struct ContentView: View {
         .sheet(isPresented: $showingNewEvent) {
             NewEventSheet(initialDate: newEventDate, eventIdToEdit: eventIdToEdit, eventPropertiesToEdit: eventPropertiesToEdit)
         }
+        .sheet(isPresented: $showingNewReminder) {
+            NewReminderSheet(reminderIdToEdit: reminderIdToEdit)
+        }
         .onChange(of: showingNewEvent) { showing in
             if !showing {
                 newEventDate = nil
                 eventIdToEdit = nil
                 eventPropertiesToEdit = nil
+            }
+        }
+        .onChange(of: showingNewReminder) { showing in
+            if !showing {
+                reminderIdToEdit = nil
             }
         }
         .onChange(of: currentDate) { _ in
@@ -90,35 +101,53 @@ struct ContentView: View {
             }
         }
         .applyViewShortcuts(selectedView: $selectedView)
-        .applySearchShortcut(showingSearch: $showingSearch, searchFocused: $searchFocused, quickAddFocused: $quickAddFocused)
+        .applySearchShortcut(showingSearch: $showingSearch, searchForward: $searchForward, searchFocused: $searchFocused, quickAddFocused: $quickAddFocused)
+        .applyEventReminderShortcuts(showingNewEvent: $showingNewEvent, showingNewReminder: $showingNewReminder)
     }
 
     private var searchOverlay: some View {
         VStack {
             Spacer()
 
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
-                    .font(.system(size: 16 * calendarManager.fontSize.scale))
-
-                TextField("Search events...", text: $searchText)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 16 * calendarManager.fontSize.scale))
-                    .focused($searchFocused)
-                    .onSubmit {
-                        closeSearch()
-                    }
-
-                if !searchText.isEmpty {
-                    Button(action: { searchText = "" }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
+            VStack(spacing: 8) {
+                // Direction indicator
+                HStack {
+                    Image(systemName: searchForward ? "arrow.forward.circle" : "arrow.backward.circle")
+                        .foregroundColor(searchForward ? .blue : .orange)
+                        .font(.system(size: 14 * calendarManager.fontSize.scale))
+                    Text(searchForward ? "Searching forward from today" : "Searching backward from today")
+                        .font(.system(size: 12 * calendarManager.fontSize.scale))
+                        .foregroundColor(.secondary)
+                    Spacer()
                 }
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+
+                // Search field
+                HStack {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(.secondary)
+                        .font(.system(size: 16 * calendarManager.fontSize.scale))
+
+                    TextField("Search events...", text: $searchText)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 16 * calendarManager.fontSize.scale))
+                        .focused($searchFocused)
+                        .onSubmit {
+                            closeSearch()
+                        }
+
+                    if !searchText.isEmpty {
+                        Button(action: { searchText = "" }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.bottom, 12)
             }
-            .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 10)
                     .fill(Color(NSColor.controlBackgroundColor))
@@ -151,19 +180,50 @@ struct ContentView: View {
 
     private func searchForEvent(_ query: String) {
         let lowercased = query.lowercased()
+        let now = Date()
+        let calendar = Calendar.current
+
+        // Query the store directly to avoid frozen object errors
+        // Adjust search range based on direction
+        let startDate: Date
+        let endDate: Date
+
+        if searchForward {
+            // Forward search: from today to 12 months ahead
+            startDate = now
+            endDate = calendar.date(byAdding: .month, value: 12, to: now) ?? now
+        } else {
+            // Backward search: from 12 months ago to today
+            startDate = calendar.date(byAdding: .month, value: -12, to: now) ?? now
+            endDate = now
+        }
+
+        let predicate = calendarManager.eventStore.predicateForEvents(withStart: startDate, end: endDate, calendars: nil)
+        let allEvents = calendarManager.eventStore.events(matching: predicate)
 
         // Find all matching events
-        let matchingEvents = calendarManager.events.filter { event in
+        let matchingEvents = allEvents.filter { event in
             (event.title?.lowercased().contains(lowercased) ?? false) ||
             (event.location?.lowercased().contains(lowercased) ?? false) ||
             (event.notes?.lowercased().contains(lowercased) ?? false)
         }
 
+        // Sort by date
+        let sortedMatches = matchingEvents.sorted { event1, event2 in
+            if searchForward {
+                // Forward: earliest first
+                return event1.startDate < event2.startDate
+            } else {
+                // Backward: latest first
+                return event1.startDate > event2.startDate
+            }
+        }
+
         // Store highlighted event IDs
-        highlightedEventIDs = Set(matchingEvents.compactMap { $0.eventIdentifier })
+        highlightedEventIDs = Set(sortedMatches.compactMap { $0.eventIdentifier })
 
         // Navigate to the first match's date
-        if let foundEvent = matchingEvents.first, let startDate = foundEvent.startDate {
+        if let foundEvent = sortedMatches.first, let startDate = foundEvent.startDate {
             currentDate = startDate
         }
     }
@@ -222,7 +282,7 @@ struct ContentView: View {
                 .font(.system(size: 16))
                 .foregroundColor(.accentColor)
 
-            TextField("Quick add event", text: $quickAddText)
+            TextField("Quick add event or reminder", text: $quickAddText)
                 .textFieldStyle(.plain)
                 .font(.system(size: 14))
                 .focused($quickAddFocused)
@@ -260,15 +320,21 @@ struct ContentView: View {
             VStack(spacing: 0) {
                 // Show bottom panel only if there are valid reminders
                 if calendarManager.hasValidReminders {
-                    let bottomPanelHeight = geometry.size.height * 0.2
+                    let bottomPanelHeight = geometry.size.height * 0.15
 
                     calendarView
                         .frame(height: geometry.size.height - bottomPanelHeight)
 
                     Divider()
 
-                    RemindersSection()
-                        .frame(height: bottomPanelHeight)
+                    RemindersSection(
+                        showingNewReminder: $showingNewReminder,
+                        onReminderDoubleClick: { reminder in
+                            reminderIdToEdit = reminder.calendarItemIdentifier
+                            showingNewReminder = true
+                        }
+                    )
+                    .frame(height: bottomPanelHeight)
                 } else {
                     calendarView
                 }
@@ -292,14 +358,17 @@ struct ContentView: View {
                         if let eventId = event.eventIdentifier {
                             print("Opening event for edit: \(event.title ?? "Untitled") with ID: \(eventId)")
                             eventIdToEdit = eventId
-                        } else {
+                        } else if let calendar = event.calendar {
                             print("Event '\(event.title ?? "Untitled")' has no identifier, using properties")
                             eventPropertiesToEdit = EventProperties(
                                 title: event.title ?? "",
                                 startDate: event.startDate,
                                 endDate: event.endDate,
-                                calendarIdentifier: event.calendar.calendarIdentifier
+                                calendarIdentifier: calendar.calendarIdentifier
                             )
+                        } else {
+                            print("Cannot edit event '\(event.title ?? "Untitled")' - no identifier and calendar is nil")
+                            return
                         }
                         showingNewEvent = true
                     }
@@ -349,12 +418,68 @@ struct ContentView: View {
         currentDate = Date()
     }
 
+    private func isReminderInput(_ text: String) -> Bool {
+        let lowercased = text.lowercased()
+        let reminderPrefixes = ["remind me to ", "remind me ", "remind ", "reminder ", "rem: ", "rem "]
+        return reminderPrefixes.contains { lowercased.hasPrefix($0) }
+    }
+
+    private func removeReminderPrefix(_ text: String) -> String {
+        let prefixes = [
+            ("remind me to ", "remind me to ".count),
+            ("remind me ", "remind me ".count),
+            ("remind ", "remind ".count),
+            ("reminder ", "reminder ".count),
+            ("rem: ", "rem: ".count),
+            ("rem ", "rem ".count)
+        ]
+
+        var result = text
+        for (prefix, count) in prefixes {
+            if result.lowercased().hasPrefix(prefix) {
+                result = String(result.dropFirst(count))
+                break
+            }
+        }
+        return result.trimmingCharacters(in: .whitespaces)
+    }
+
     private func createQuickEvent() {
         guard !quickAddText.isEmpty else { return }
 
         let parser = NaturalLanguageParser()
 
-        if let parsed = parser.parseEventInput(quickAddText) {
+        // Check if it's a reminder
+        if isReminderInput(quickAddText) {
+            if let parsed = parser.parseReminderInput(quickAddText) {
+                do {
+                    try calendarManager.createReminder(
+                        title: parsed.title,
+                        dueDate: parsed.dueDate,
+                        notes: parsed.notes
+                    )
+                    quickAddText = ""
+                    quickAddFocused = false
+                } catch {
+                    print("Error creating quick reminder: \(error)")
+                }
+            } else {
+                // Fallback: create reminder with raw text as title (removing prefix)
+                let title = removeReminderPrefix(quickAddText)
+
+                do {
+                    try calendarManager.createReminder(
+                        title: title,
+                        dueDate: nil,
+                        notes: nil
+                    )
+                    quickAddText = ""
+                    quickAddFocused = false
+                } catch {
+                    print("Error creating quick reminder: \(error)")
+                }
+            }
+        } else if let parsed = parser.parseEventInput(quickAddText) {
             do {
                 try calendarManager.createEvent(
                     title: parsed.title,
@@ -527,18 +652,53 @@ extension View {
         self.modifier(ViewShortcutsModifier(selectedView: selectedView))
     }
 
-    func applySearchShortcut(showingSearch: Binding<Bool>, searchFocused: FocusState<Bool>.Binding, quickAddFocused: FocusState<Bool>.Binding) -> some View {
+    func applySearchShortcut(showingSearch: Binding<Bool>, searchForward: Binding<Bool>, searchFocused: FocusState<Bool>.Binding, quickAddFocused: FocusState<Bool>.Binding) -> some View {
         self.background(
-            Button("") {
-                // Unfocus quick add field first to prevent "/" from being typed
-                quickAddFocused.wrappedValue = false
-                showingSearch.wrappedValue = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    searchFocused.wrappedValue = true
+            Group {
+                // Forward search with /
+                Button("") {
+                    quickAddFocused.wrappedValue = false
+                    searchForward.wrappedValue = true
+                    showingSearch.wrappedValue = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        searchFocused.wrappedValue = true
+                    }
                 }
+                .keyboardShortcut("/", modifiers: [])
+                .hidden()
+
+                // Backward search with \
+                Button("") {
+                    quickAddFocused.wrappedValue = false
+                    searchForward.wrappedValue = false
+                    showingSearch.wrappedValue = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        searchFocused.wrappedValue = true
+                    }
+                }
+                .keyboardShortcut("\\", modifiers: [])
+                .hidden()
             }
-            .keyboardShortcut("/", modifiers: [])
-            .hidden()
+        )
+    }
+
+    func applyEventReminderShortcuts(showingNewEvent: Binding<Bool>, showingNewReminder: Binding<Bool>) -> some View {
+        self.background(
+            Group {
+                // Command+E for new event
+                Button("") {
+                    showingNewEvent.wrappedValue = true
+                }
+                .keyboardShortcut("e", modifiers: .command)
+                .hidden()
+
+                // Command+R for new reminder
+                Button("") {
+                    showingNewReminder.wrappedValue = true
+                }
+                .keyboardShortcut("r", modifiers: .command)
+                .hidden()
+            }
         )
     }
 }

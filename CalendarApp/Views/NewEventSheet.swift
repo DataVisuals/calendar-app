@@ -4,6 +4,7 @@ import EventKit
 struct NewEventSheet: View {
     @EnvironmentObject var calendarManager: CalendarManager
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
 
     let initialDate: Date?
     let eventIdToEdit: String?
@@ -118,7 +119,7 @@ struct NewEventSheet: View {
                                 ForEach(calendarManager.calendars, id: \.calendarIdentifier) { calendar in
                                     HStack {
                                         Circle()
-                                            .fill(calendarManager.color(for: calendar))
+                                            .fill(calendarManager.color(for: calendar, colorScheme: colorScheme))
                                             .frame(width: 12, height: 12)
                                         Text(calendar.title)
                                             .font(.system(size: 14 * calendarManager.fontSize.scale))

@@ -3,6 +3,7 @@ import EventKit
 
 struct WeekView: View {
     @EnvironmentObject var calendarManager: CalendarManager
+    @Environment(\.colorScheme) var colorScheme
     @Binding var currentDate: Date
     let highlightedEventIDs: Set<String>
 
@@ -76,6 +77,7 @@ struct WeekView: View {
 
 struct DayColumn: View {
     @EnvironmentObject var calendarManager: CalendarManager
+    @Environment(\.colorScheme) var colorScheme
     let date: Date
     let hourHeight: CGFloat
     let highlightedEventIDs: Set<String>
@@ -163,6 +165,7 @@ struct DayColumn: View {
 
 struct EventBlock: View {
     @EnvironmentObject var calendarManager: CalendarManager
+    @Environment(\.colorScheme) var colorScheme
     let event: EKEvent
     let hourHeight: CGFloat
     let date: Date
@@ -179,7 +182,7 @@ struct EventBlock: View {
             HStack(spacing: 4) {
                 Image(systemName: EventIconHelper.icon(for: event))
                     .font(.system(size: 12 * calendarManager.fontSize.scale))
-                    .foregroundColor(calendarManager.color(for: event.calendar))
+                    .foregroundColor(calendarManager.color(for: event.calendar, colorScheme: colorScheme))
                     .frame(width: 16)
 
                 Text(event.title ?? "Untitled")
@@ -196,11 +199,11 @@ struct EventBlock: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 5)
-                .fill(calendarManager.color(for: event.calendar).opacity(isHighlighted ? 0.5 : 0.3))
+                .fill(calendarManager.color(for: event.calendar, colorScheme: colorScheme).opacity(isHighlighted ? 0.5 : 0.3))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 5)
-                .stroke(calendarManager.color(for: event.calendar), lineWidth: isHighlighted ? 2.5 : 1.5)
+                .stroke(calendarManager.color(for: event.calendar, colorScheme: colorScheme), lineWidth: isHighlighted ? 2.5 : 1.5)
         )
         .offset(y: offsetY)
         .frame(height: height)
