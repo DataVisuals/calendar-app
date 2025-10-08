@@ -7,22 +7,24 @@ struct NewsFeedView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            HStack {
+            HStack(spacing: 8) {
                 Image(systemName: "newspaper")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.secondary)
+                    .fixedSize()
 
                 Text("TODAY'S HEADLINES")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundColor(.secondary)
-
-                Spacer()
+                    .fixedSize()
 
                 if newsManager.isLoading {
                     ProgressView()
                         .scaleEffect(0.6)
+                        .fixedSize()
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 12)
             .padding(.top, 6)
 
@@ -42,19 +44,21 @@ struct NewsFeedView: View {
                                 Text("•")
                                     .font(.system(size: 9))
                                     .foregroundColor(.secondary)
+                                    .fixedSize()
 
                                 Text("\(article.title) [\(article.source)]")
                                     .font(.system(size: 11 * calendarManager.fontSize.scale))
                                     .foregroundColor(.primary)
                                     .lineLimit(1)
                                     .truncationMode(.tail)
-
-                                Spacer()
+                                    .frame(maxWidth: .infinity, alignment: .leading)
 
                                 Image(systemName: "arrow.up.right.square")
                                     .font(.system(size: 9))
                                     .foregroundColor(.secondary)
+                                    .fixedSize()
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 2)
                             .contentShape(Rectangle())

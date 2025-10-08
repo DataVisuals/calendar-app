@@ -7,6 +7,8 @@ struct TodayView: View {
     @Binding var currentDate: Date
     let highlightedEventIDs: Set<String>
 
+    @State private var containerWidth: CGFloat = 0
+
     private var calendar: Calendar {
         var cal = Calendar.current
         cal.firstWeekday = 2 // Monday = 2 (Sunday = 1)
@@ -19,13 +21,14 @@ struct TodayView: View {
             let timeColumnWidth: CGFloat = 60
             let totalTimeColumns = 1 + calendarManager.alternateTimezones.count
             let totalTimeWidth = CGFloat(totalTimeColumns) * timeColumnWidth
-            let dateHeaderWidth = geometry.size.width - totalTimeWidth
+            let effectiveWidth = containerWidth > 0 ? containerWidth : geometry.size.width
+            let dateHeaderWidth = effectiveWidth - totalTimeWidth
 
             VStack(spacing: 0) {
                 // News feed
                 NewsFeedView()
                     .environmentObject(calendarManager)
-                    .frame(width: geometry.size.width)
+                    .frame(width: effectiveWidth)
 
                 // Sticky header
                 ZStack(alignment: .topLeading) {
@@ -67,7 +70,7 @@ struct TodayView: View {
                         .frame(width: dateHeaderWidth, height: 70)
                     }
                 }
-                .frame(width: geometry.size.width, height: 70)
+                .frame(width: effectiveWidth, height: 70)
                 .border(Color(NSColor.separatorColor), width: 0.5)
 
                 // Scrollable content
@@ -105,9 +108,14 @@ struct TodayView: View {
                         TodayColumnContent(date: currentDate, hourHeight: hourHeight, highlightedEventIDs: highlightedEventIDs)
                             .frame(width: dateHeaderWidth)
                     }
-                    .frame(width: geometry.size.width)
+                    .frame(width: effectiveWidth)
                 }
                 .scrollIndicators(.hidden)
+            }
+            .onAppear {
+                if containerWidth == 0 {
+                    containerWidth = geometry.size.width
+                }
             }
         }
     }

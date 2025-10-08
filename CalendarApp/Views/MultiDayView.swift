@@ -8,6 +8,8 @@ struct MultiDayView: View {
     let workweekOnly: Bool
     let highlightedEventIDs: Set<String>
 
+    @State private var containerWidth: CGFloat = 0
+
     private var calendar: Calendar {
         var cal = Calendar.current
         cal.firstWeekday = 2 // Monday = 2 (Sunday = 1)
@@ -27,6 +29,7 @@ struct MultiDayView: View {
             let timeColumnWidth: CGFloat = 60
             let totalTimeColumns = 1 + calendarManager.alternateTimezones.count
             let totalTimeWidth = CGFloat(totalTimeColumns) * timeColumnWidth
+            let effectiveWidth = containerWidth > 0 ? containerWidth : geometry.size.width
 
             VStack(spacing: 0) {
                 // Headers
@@ -51,10 +54,11 @@ struct MultiDayView: View {
                     HStack(spacing: 0) {
                         ForEach(displayDays, id: \.self) { date in
                             DayHeader(date: date)
-                                .frame(width: (geometry.size.width - totalTimeWidth) / CGFloat(displayDays.count), height: 70)
+                                .frame(width: (effectiveWidth - totalTimeWidth) / CGFloat(displayDays.count), height: 70)
                         }
                     }
                 }
+                .frame(width: effectiveWidth, height: 70)
 
                 // Scrollable content
                 ScrollView {
@@ -91,14 +95,21 @@ struct MultiDayView: View {
                         HStack(spacing: 0) {
                             ForEach(displayDays, id: \.self) { date in
                                 DayColumnContent(date: date, hourHeight: hourHeight, highlightedEventIDs: highlightedEventIDs)
-                                    .frame(width: (geometry.size.width - totalTimeWidth) / CGFloat(displayDays.count))
+                                    .frame(width: (effectiveWidth - totalTimeWidth) / CGFloat(displayDays.count))
                             }
                         }
                     }
+                    .frame(width: effectiveWidth)
                 }
+                .scrollIndicators(.hidden)
             }
             .onScrollWheel { event in
                 handleScrollWheel(event)
+            }
+            .onAppear {
+                if containerWidth == 0 {
+                    containerWidth = geometry.size.width
+                }
             }
         }
     }
