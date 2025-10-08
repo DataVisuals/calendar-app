@@ -63,6 +63,19 @@ class CalendarManager: ObservableObject {
     }
 
     init() {
+        // Load saved preferences
+        if let savedFontSizeRaw = UserDefaults.standard.string(forKey: "fontSize"),
+           let savedFontSize = FontSize(rawValue: savedFontSizeRaw) {
+            fontSize = savedFontSize
+            print("✓ Restored font size: \(savedFontSize.rawValue)")
+        }
+
+        if let savedTempUnitRaw = UserDefaults.standard.string(forKey: "temperatureUnit"),
+           let savedTempUnit = TemperatureUnit(rawValue: savedTempUnitRaw) {
+            temperatureUnit = savedTempUnit
+            print("✓ Restored temperature unit: \(savedTempUnit.rawValue)")
+        }
+
         checkAccess()
 
         // Observe defaultCalendar changes and persist
@@ -83,6 +96,26 @@ class CalendarManager: ObservableObject {
                     UserDefaults.standard.synchronize()
                     print("✓ Cleared default calendar")
                 }
+            }
+            .store(in: &cancellables)
+
+        // Observe fontSize changes and persist
+        $fontSize
+            .dropFirst() // Skip initial value
+            .sink { fontSize in
+                UserDefaults.standard.set(fontSize.rawValue, forKey: "fontSize")
+                UserDefaults.standard.synchronize()
+                print("✓ Saved font size: \(fontSize.rawValue)")
+            }
+            .store(in: &cancellables)
+
+        // Observe temperatureUnit changes and persist
+        $temperatureUnit
+            .dropFirst() // Skip initial value
+            .sink { tempUnit in
+                UserDefaults.standard.set(tempUnit.rawValue, forKey: "temperatureUnit")
+                UserDefaults.standard.synchronize()
+                print("✓ Saved temperature unit: \(tempUnit.rawValue)")
             }
             .store(in: &cancellables)
 
